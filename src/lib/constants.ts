@@ -6,6 +6,7 @@ export const PREFERRED_JOB_ROLES: PreferredJobRole[] = [
   'MFI',
   'CHIT',
   'INSURANCE',
+  'OTHER',
 ];
 
 export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string; color: string }[] = [
@@ -15,6 +16,23 @@ export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string; co
   { value: 'SELECTED', label: 'Selected', color: 'bg-green-100 text-green-800 border-green-200' },
   { value: 'REJECTED', label: 'Rejected', color: 'bg-red-100 text-red-800 border-red-200' },
 ];
+
+export const EDUCATION_QUALIFICATIONS = [
+  '10th / SSLC',
+  '12th / HSC',
+  'ITI / Diploma',
+  'B.Com',
+  'B.Sc',
+  'B.A',
+  'BBA / BBM',
+  'B.E / B.Tech',
+  'BCA',
+  'M.Com',
+  'MBA',
+  'MCA',
+  'Post Graduate (Other)',
+  'Other Graduate',
+] as const;
 
 export const BLOOD_GROUPS = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Other'
@@ -29,7 +47,7 @@ export const REFERRAL_SOURCES = [
   'Friend',
   'Reference',
   'Advertisement',
-  'Other'
+  'Other',
 ] as const;
 
 export const BRAND = {

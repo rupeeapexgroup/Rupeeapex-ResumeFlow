@@ -1,4 +1,4 @@
-export type PreferredJobRole = 'GOLD' | 'NIDHI' | 'MFI' | 'CHIT' | 'INSURANCE';
+export type PreferredJobRole = 'GOLD' | 'NIDHI' | 'MFI' | 'CHIT' | 'INSURANCE' | 'OTHER';
 
 export type ApplicationStatus = 'NEW' | 'UNDER_REVIEW' | 'SHORTLISTED' | 'REJECTED' | 'SELECTED';
 
@@ -7,10 +7,16 @@ export interface PersonalDetails {
   dateOfBirth: string; // YYYY-MM-DD
   age: number;
   gender: 'Male' | 'Female' | 'Other';
-  bloodGroup: string;
+  bloodGroup?: string;
   maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed';
   fathersName: string;
   mothersName: string;
+  spouseName?: string;
+  mobileNumber: string;
+  alternativeMobileNumber?: string;
+  email: string;
+  aadhaarNumber: string; // 12-digit Aadhaar number
+  panNumber: string;     // 10-character PAN number
 }
 
 export interface FamilyDetails {
@@ -18,55 +24,46 @@ export interface FamilyDetails {
   fathersMobile?: string;
   mothersOccupation?: string;
   mothersMobile?: string;
+  spouseOccupation?: string;
   spouseName?: string;
   marriageDate?: string;
   numberOfChildren?: number;
-  dependentCount?: number;
 }
 
-export interface ContactDetails {
-  mobileNumber: string;
-  alternativeMobileNumber?: string;
-  email: string;
-  alternativeEmail?: string;
+export interface AddressUnit {
+  doorNoStreet: string;
+  villageOrArea: string;
+  taluk: string;
+  district: string;
+  state: string;
+  pincode: string;
 }
 
 export interface AddressDetails {
-  permanentAddress: {
-    doorNoStreet: string;
-    villageOrArea: string;
-    taluk: string;
-    district: string;
-    state: string;
-    pincode: string;
-  };
-  temporaryAddress: {
-    doorNoStreet: string;
-    villageOrArea: string;
-    taluk: string;
-    district: string;
-    state: string;
-    pincode: string;
-  };
+  permanentAddress: AddressUnit;
+  temporaryAddress: AddressUnit;
   sameAsPermanent?: boolean;
 }
 
 export interface EducationDetails {
   highestQualification: string;
+  educationDetails?: string; // Specialization / course details
   institutionName: string;
-  additionalQualification?: string;
   passingYear: string;
   percentageOrGrade?: string;
+  additionalQualification?: string;
 }
 
 export interface EmploymentDetails {
   hasPreviousExperience: boolean;
-  previousOccupation?: string;
-  previousCompanyName?: string;
+  previousCompany?: string;
+  previousDesignation?: string;
+  yearsOfExperience?: number;
   experienceDurationYears?: number;
   experienceDurationMonths?: number;
   lastDrawnSalary?: string;
   reasonForLeaving?: string;
+  previousOccupation?: string;
 }
 
 export interface ReferenceDetails {
@@ -81,11 +78,11 @@ export interface CandidateRecord {
   applicationId: string;
   personalDetails: PersonalDetails;
   familyDetails: FamilyDetails;
-  contactDetails: ContactDetails;
   addressDetails: AddressDetails;
   educationDetails: EducationDetails;
   employmentDetails: EmploymentDetails;
   preferredJobRole: PreferredJobRole;
+  preferredJobRoleOther?: string;
   referenceDetails: ReferenceDetails;
   photographStorageKey: string;
   photographFileName?: string;
@@ -105,6 +102,7 @@ export interface AdminUser {
 
 export interface DashboardStats {
   total: number;
+  today: number;
   new: number;
   underReview: number;
   shortlisted: number;

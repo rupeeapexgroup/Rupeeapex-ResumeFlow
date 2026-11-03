@@ -43,3 +43,4 @@ export function CompanyHeader({ subtitle, showBackHome }: CompanyHeaderProps) {
     </header>
   );
 }
+

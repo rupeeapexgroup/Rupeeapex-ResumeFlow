@@ -56,3 +56,4 @@ function booleanType() {
 }
 
 export const Admin = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', AdminSchema);
+

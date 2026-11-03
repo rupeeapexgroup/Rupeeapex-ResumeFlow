@@ -21,12 +21,12 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
 
   let currentY = height - 20;
 
-  // 1. Rupeeapex Banner Image
+  // 1. Rupeeapex Banner / Logo Image
   try {
     const bannerPath = path.join(process.cwd(), 'public', 'logo', 'Rupeeapex-fullBanner.jpeg');
     const bannerBytes = await fs.readFile(bannerPath);
     const bannerImage = await pdfDoc.embedJpg(bannerBytes);
-    const bannerWidth = width - 40; // 555.28
+    const bannerWidth = width - 40;
     const bannerHeight = 70;
     page.drawImage(bannerImage, {
       x: 20,
@@ -36,7 +36,6 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     });
     currentY -= (bannerHeight + 10);
   } catch (err) {
-    // Fallback header banner box if image file is not accessible
     page.drawRectangle({
       x: 20,
       y: currentY - 50,
@@ -81,13 +80,13 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     color: primaryYellow,
   });
 
-  currentY -= 36;
+  currentY -= 34;
 
   // 3. Candidate Photo Box (Top-Right)
   const photoBoxWidth = 85;
   const photoBoxHeight = 100;
   const photoX = width - 20 - photoBoxWidth;
-  const photoY = currentY - photoBoxHeight + 10;
+  const photoY = currentY - photoBoxHeight + 8;
 
   page.drawRectangle({
     x: photoX,
@@ -125,14 +124,14 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
 
   if (!photoDrawn) {
     page.drawText('CANDIDATE', {
-      x: photoX + 10,
+      x: photoX + 12,
       y: photoY + 55,
       size: 9,
       font: fontRegular,
       color: grayText,
     });
     page.drawText('PHOTOGRAPH', {
-      x: photoX + 8,
+      x: photoX + 9,
       y: photoY + 42,
       size: 8,
       font: fontRegular,
@@ -140,29 +139,29 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     });
   }
 
-  // Helper function to draw section header
+  // Section header helper
   const drawSectionHeader = (title: string, yPos: number, customWidth?: number) => {
     const w = customWidth || width - 40;
     page.drawRectangle({
       x: 20,
-      y: yPos - 16,
+      y: yPos - 15,
       width: w,
-      height: 16,
+      height: 15,
       color: rgb(230 / 255, 244 / 255, 234 / 255),
       borderColor: primaryGreen,
       borderWidth: 0.8,
     });
     page.drawText(title, {
       x: 26,
-      y: yPos - 12,
-      size: 9,
+      y: yPos - 11,
+      size: 8.5,
       font: fontBold,
       color: primaryGreen,
     });
-    return yPos - 22;
+    return yPos - 20;
   };
 
-  // Helper to draw two-column key-value rows
+  // Two-column row helper
   const drawRow = (
     label1: string,
     val1: string,
@@ -172,32 +171,34 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     maxWidth?: number
   ) => {
     const colWidth = (maxWidth || width - 40) / 2;
-    // Col 1
-    page.drawText(label1 + ':', { x: 26, y: yPos, size: 8, font: fontBold, color: grayText });
-    page.drawText(val1 || 'N/A', {
-      x: 26 + fontBold.widthOfTextAtSize(label1 + ': ', 8),
+    page.drawText(label1 + ':', { x: 26, y: yPos, size: 7.5, font: fontBold, color: grayText });
+    page.drawText((val1 || 'N/A').substring(0, 32), {
+      x: 26 + fontBold.widthOfTextAtSize(label1 + ': ', 7.5),
       y: yPos,
-      size: 8.5,
+      size: 8,
       font: fontRegular,
       color: darkText,
     });
 
-    // Col 2
     if (label2) {
-      const x2 = 20 + colWidth + 10;
-      page.drawText(label2 + ':', { x: x2, y: yPos, size: 8, font: fontBold, color: grayText });
-      page.drawText(val2 || 'N/A', {
-        x: x2 + fontBold.widthOfTextAtSize(label2 + ': ', 8),
+      const x2 = 20 + colWidth + 5;
+      page.drawText(label2 + ':', { x: x2, y: yPos, size: 7.5, font: fontBold, color: grayText });
+      page.drawText((val2 || 'N/A').substring(0, 32), {
+        x: x2 + fontBold.widthOfTextAtSize(label2 + ': ', 7.5),
         y: yPos,
-        size: 8.5,
+        size: 8,
         font: fontRegular,
         color: darkText,
       });
     }
-    return yPos - 13;
+    return yPos - 12;
   };
 
   // 4. PREFERRED JOB ROLE BANNER
+  const roleDisplay = candidate.preferredJobRole === 'OTHER'
+    ? `OTHER: ${candidate.preferredJobRoleOther || 'Specialized Role'}`
+    : candidate.preferredJobRole;
+
   page.drawRectangle({
     x: 20,
     y: currentY - 20,
@@ -211,34 +212,25 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   page.drawText('PREFERRED JOB ROLE: ', {
     x: 28,
     y: currentY - 14,
-    size: 9,
+    size: 8.5,
     font: fontBold,
     color: primaryGreen,
   });
 
-  page.drawText(candidate.preferredJobRole, {
-    x: 155,
+  page.drawText(roleDisplay, {
+    x: 145,
     y: currentY - 14,
-    size: 11,
+    size: 10,
     font: fontBold,
     color: rgb(180 / 255, 110 / 255, 0 / 255),
   });
 
-  const statusStr = `Status: ${candidate.applicationStatus}`;
-  page.drawText(statusStr, {
-    x: width - 40 - photoBoxWidth - 10 - fontBold.widthOfTextAtSize(statusStr, 9) - 10,
-    y: currentY - 14,
-    size: 9,
-    font: fontBold,
-    color: primaryGreen,
-  });
+  currentY -= 26;
 
-  currentY -= 28;
-
-  // 5. PERSONAL DETAILS SECTION
+  // 5. PERSONAL DETAILS
   currentY = drawSectionHeader('1. PERSONAL DETAILS', currentY, width - 40 - photoBoxWidth - 10);
   currentY = drawRow(
-    'Full Name',
+    'Candidate Name',
     candidate.personalDetails.fullName,
     'Gender',
     candidate.personalDetails.gender,
@@ -247,77 +239,76 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   );
   currentY = drawRow(
     'Date of Birth',
-    `${candidate.personalDetails.dateOfBirth} (Age: ${candidate.personalDetails.age} yrs)`,
-    'Blood Group',
-    candidate.personalDetails.bloodGroup,
-    currentY,
-    width - 40 - photoBoxWidth - 10
-  );
-  currentY = drawRow(
+    `${candidate.personalDetails.dateOfBirth} (${candidate.personalDetails.age} yrs)`,
     'Marital Status',
     candidate.personalDetails.maritalStatus,
-    "Father's Name",
-    candidate.personalDetails.fathersName,
     currentY,
     width - 40 - photoBoxWidth - 10
   );
   currentY = drawRow(
+    "Father's Name",
+    candidate.personalDetails.fathersName,
     "Mother's Name",
     candidate.personalDetails.mothersName,
-    '',
-    '',
+    currentY,
+    width - 40 - photoBoxWidth - 10
+  );
+  currentY = drawRow(
+    'Mobile',
+    candidate.personalDetails.mobileNumber,
+    'Alt Mobile',
+    candidate.personalDetails.alternativeMobileNumber || 'N/A',
+    currentY,
+    width - 40 - photoBoxWidth - 10
+  );
+  currentY = drawRow(
+    'Email',
+    candidate.personalDetails.email,
+    'Aadhaar No',
+    candidate.personalDetails.aadhaarNumber || 'N/A',
+    currentY,
+    width - 40 - photoBoxWidth - 10
+  );
+  currentY = drawRow(
+    'PAN No',
+    candidate.personalDetails.panNumber || 'N/A',
+    'Spouse Name',
+    candidate.personalDetails.spouseName || 'N/A',
     currentY,
     width - 40 - photoBoxWidth - 10
   );
 
   // Resume full width below the photo box
-  currentY = Math.min(currentY, photoY - 15);
+  currentY = Math.min(currentY, photoY - 12);
 
   // 6. FAMILY DETAILS
   currentY = drawSectionHeader('2. FAMILY DETAILS', currentY);
   currentY = drawRow(
     "Father's Occupation",
-    candidate.familyDetails.fathersOccupation || 'N/A',
+    candidate.familyDetails?.fathersOccupation || 'N/A',
     "Father's Mobile",
-    candidate.familyDetails.fathersMobile || 'N/A',
+    candidate.familyDetails?.fathersMobile || 'N/A',
     currentY
   );
   currentY = drawRow(
     "Mother's Occupation",
-    candidate.familyDetails.mothersOccupation || 'N/A',
+    candidate.familyDetails?.mothersOccupation || 'N/A',
     "Mother's Mobile",
-    candidate.familyDetails.mothersMobile || 'N/A',
+    candidate.familyDetails?.mothersMobile || 'N/A',
     currentY
   );
-  if (candidate.personalDetails.maritalStatus === 'Married' || candidate.familyDetails.spouseName) {
+  if (candidate.familyDetails?.spouseOccupation || candidate.personalDetails.maritalStatus === 'Married') {
     currentY = drawRow(
+      'Spouse Occupation',
+      candidate.familyDetails?.spouseOccupation || 'N/A',
       'Spouse Name',
-      candidate.familyDetails.spouseName || 'N/A',
-      'Marriage Date',
-      candidate.familyDetails.marriageDate || 'N/A',
+      candidate.personalDetails?.spouseName || candidate.familyDetails?.spouseName || 'N/A',
       currentY
     );
   }
 
-  // 7. CONTACT DETAILS
-  currentY = drawSectionHeader('3. CONTACT DETAILS', currentY);
-  currentY = drawRow(
-    'Mobile Number',
-    candidate.contactDetails.mobileNumber,
-    'Alt. Mobile Number',
-    candidate.contactDetails.alternativeMobileNumber || 'N/A',
-    currentY
-  );
-  currentY = drawRow(
-    'Email Address',
-    candidate.contactDetails.email,
-    'Alt. Email',
-    candidate.contactDetails.alternativeEmail || 'N/A',
-    currentY
-  );
-
-  // 8. ADDRESS DETAILS
-  currentY = drawSectionHeader('4. ADDRESS DETAILS', currentY);
+  // 7. ADDRESS DETAILS
+  currentY = drawSectionHeader('3. ADDRESS DETAILS', currentY);
   const perm = candidate.addressDetails.permanentAddress;
   const temp = candidate.addressDetails.temporaryAddress;
   const permStr = `${perm.doorNoStreet}, ${perm.villageOrArea}, ${perm.taluk}, ${perm.district}, ${perm.state} - ${perm.pincode}`;
@@ -325,117 +316,125 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     ? 'Same as Permanent Address'
     : `${temp.doorNoStreet}, ${temp.villageOrArea}, ${temp.taluk}, ${temp.district}, ${temp.state} - ${temp.pincode}`;
 
-  page.drawText('Permanent Address:', { x: 26, y: currentY, size: 8, font: fontBold, color: grayText });
-  currentY -= 11;
-  page.drawText(permStr.substring(0, 110), { x: 26, y: currentY, size: 8, font: fontRegular, color: darkText });
-  currentY -= 13;
+  page.drawText('Permanent Address:', { x: 26, y: currentY, size: 7.5, font: fontBold, color: grayText });
+  currentY -= 10;
+  page.drawText(permStr.substring(0, 115), { x: 26, y: currentY, size: 7.5, font: fontRegular, color: darkText });
+  currentY -= 12;
 
-  page.drawText('Temporary Address:', { x: 26, y: currentY, size: 8, font: fontBold, color: grayText });
-  currentY -= 11;
-  page.drawText(tempStr.substring(0, 110), { x: 26, y: currentY, size: 8, font: fontRegular, color: darkText });
+  page.drawText('Temporary / Present Address:', { x: 26, y: currentY, size: 7.5, font: fontBold, color: grayText });
+  currentY -= 10;
+  page.drawText(tempStr.substring(0, 115), { x: 26, y: currentY, size: 7.5, font: fontRegular, color: darkText });
   currentY -= 14;
 
-  // 9. EDUCATIONAL DETAILS
-  currentY = drawSectionHeader('5. EDUCATIONAL DETAILS', currentY);
+  // 8. EDUCATION DETAILS
+  currentY = drawSectionHeader('4. EDUCATION DETAILS', currentY);
   currentY = drawRow(
     'Highest Qualification',
     candidate.educationDetails.highestQualification,
-    'Passing Year',
+    'Year of Passing',
     candidate.educationDetails.passingYear,
     currentY
   );
   currentY = drawRow(
-    'School / College Name',
+    'Institution Name',
     candidate.educationDetails.institutionName,
-    'Addl. Qualification',
-    candidate.educationDetails.additionalQualification || 'N/A',
+    'Education / Course Details',
+    candidate.educationDetails.educationDetails || candidate.educationDetails.additionalQualification || 'N/A',
     currentY
   );
 
-  // 10. EMPLOYMENT DETAILS
-  currentY = drawSectionHeader('6. EMPLOYMENT DETAILS', currentY);
+  // 9. EXPERIENCE DETAILS
+  currentY = drawSectionHeader('5. EXPERIENCE DETAILS', currentY);
   const hasExp = candidate.employmentDetails.hasPreviousExperience;
   currentY = drawRow(
     'Previous Experience',
-    hasExp ? 'Yes' : 'No (Fresher)',
-    'Previous Occupation',
-    hasExp ? (candidate.employmentDetails.previousOccupation || 'N/A') : 'N/A',
+    hasExp ? 'Yes (Experienced)' : 'No (Fresher)',
+    'Previous Company',
+    hasExp ? (candidate.employmentDetails.previousCompany || candidate.employmentDetails.previousCompanyName || 'N/A') : 'N/A',
     currentY
   );
   if (hasExp) {
-    const durationStr = `${candidate.employmentDetails.experienceDurationYears || 0} Years, ${candidate.employmentDetails.experienceDurationMonths || 0} Months`;
+    const yearsStr = candidate.employmentDetails.yearsOfExperience !== undefined
+      ? `${candidate.employmentDetails.yearsOfExperience} Years`
+      : `${candidate.employmentDetails.experienceDurationYears || 0} Yrs, ${candidate.employmentDetails.experienceDurationMonths || 0} Mos`;
     currentY = drawRow(
-      'Previous Company',
-      candidate.employmentDetails.previousCompanyName || 'N/A',
-      'Experience Duration',
-      durationStr,
+      'Previous Designation',
+      candidate.employmentDetails.previousDesignation || candidate.employmentDetails.previousOccupation || 'N/A',
+      'Years of Experience',
+      yearsStr,
       currentY
     );
   }
 
-  // 11. OTHER & REFERENCE INFORMATION
-  currentY = drawSectionHeader('7. REFERENCE & OTHER INFORMATION', currentY);
+  // 10. OTHER DETAILS & REFERENCE
+  currentY = drawSectionHeader('6. OTHER DETAILS & REFERENCE', currentY);
   currentY = drawRow(
-    'Referral Source',
+    'How did you know about this job?',
     candidate.referenceDetails.referralSource,
-    'Referrer Name / Contact',
+    'Reference Name / Contact',
     `${candidate.referenceDetails.referrerName || 'N/A'} ${candidate.referenceDetails.referrerContact ? `(${candidate.referenceDetails.referrerContact})` : ''}`,
     currentY
   );
+  if (candidate.referenceDetails.additionalRemarks) {
+    page.drawText('Additional Details: ' + candidate.referenceDetails.additionalRemarks.substring(0, 90), {
+      x: 26,
+      y: currentY,
+      size: 7.5,
+      font: fontRegular,
+      color: darkText,
+    });
+    currentY -= 12;
+  }
 
-  // 12. DECLARATION & SIGNATURE
-  currentY = drawSectionHeader('8. DECLARATION', currentY);
+  // 11. DECLARATION & SIGNATURE
+  currentY = drawSectionHeader('7. DECLARATION', currentY);
   const declarationText =
     'I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief. I understand that any false or misleading statements may lead to disqualification or dismissal.';
-  page.drawText(declarationText.substring(0, 120), { x: 26, y: currentY, size: 7.5, font: fontRegular, color: grayText });
-  currentY -= 10;
-  page.drawText(declarationText.substring(120), { x: 26, y: currentY, size: 7.5, font: fontRegular, color: grayText });
-  currentY -= 20;
+  page.drawText(declarationText.substring(0, 125), { x: 26, y: currentY, size: 7, font: fontRegular, color: grayText });
+  currentY -= 9;
+  page.drawText(declarationText.substring(125), { x: 26, y: currentY, size: 7, font: fontRegular, color: grayText });
+  currentY -= 18;
 
-  // Bottom Signature Row
+  // Signature row
   const submittedDateStr = new Date(candidate.submittedAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
 
-  page.drawText(`Application Date: ${submittedDateStr}`, {
+  page.drawText(`Date: ${submittedDateStr}`, {
     x: 26,
     y: currentY,
-    size: 8.5,
+    size: 8,
     font: fontBold,
     color: darkText,
   });
 
   page.drawText('Candidate Signature: __________________________', {
-    x: width - 260,
+    x: width - 250,
     y: currentY,
-    size: 8.5,
+    size: 8,
     font: fontBold,
     color: darkText,
   });
 
-  currentY -= 18;
+  currentY -= 16;
 
-  // Footer
   page.drawLine({
     start: { x: 20, y: currentY },
     end: { x: width - 20, y: currentY },
-    thickness: 0.8,
+    thickness: 0.6,
     color: borderColor,
   });
 
-  currentY -= 10;
-  page.drawText(
-    'Rupeeapex Groups of Companies | ResumeFlow Confidential HR Document | Generated securely',
-    {
-      x: 30,
-      y: currentY,
-      size: 7,
-      font: fontRegular,
-      color: grayText,
-    }
-  );
+  currentY -= 9;
+  page.drawText('Rupeeapex Groups of Companies | Official HR Job Application Record', {
+    x: 26,
+    y: currentY,
+    size: 6.5,
+    font: fontRegular,
+    color: grayText,
+  });
 
   return pdfDoc.save();
 }

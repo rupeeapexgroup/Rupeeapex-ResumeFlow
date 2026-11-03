@@ -83,3 +83,4 @@ export async function getCandidatePhotograph(storageKey: string): Promise<{ buff
     return null;
   }
 }
+

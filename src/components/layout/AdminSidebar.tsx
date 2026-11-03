@@ -158,3 +158,4 @@ export function AdminSidebar({ currentUsername = 'HR Admin' }: AdminSidebarProps
     </>
   );
 }
+

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
-import { PREFERRED_JOB_ROLES, APPLICATION_STATUSES } from '@/lib/constants';
+import { APPLICATION_STATUSES } from '@/lib/constants';
 import {
   ArrowLeft,
   Download,
@@ -22,6 +22,8 @@ import {
   Save,
   AlertCircle,
   FileText,
+  CreditCard,
+  Shield,
 } from 'lucide-react';
 
 export default function CandidateDetailPage() {
@@ -128,6 +130,10 @@ export default function CandidateDetailPage() {
     );
   }
 
+  const roleDisplay = candidate.preferredJobRole === 'OTHER' && candidate.preferredJobRoleOther
+    ? `OTHER: ${candidate.preferredJobRoleOther}`
+    : candidate.preferredJobRole;
+
   const statusObj = APPLICATION_STATUSES.find((s) => s.value === currentStatus);
 
   return (
@@ -198,19 +204,24 @@ export default function CandidateDetailPage() {
 
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Preferred Business Role
+                  Preferred Job Role
                 </span>
-                <div className="text-2xl font-black text-slate-900 flex items-center gap-2">
-                  <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  <span>{candidate.preferredJobRole}</span>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
+                  <span>{roleDisplay}</span>
                 </div>
-                <div className="mt-1 flex items-center gap-2">
+                {candidate.preferredJobRole === 'OTHER' && candidate.preferredJobRoleOther && (
+                  <div className="text-xs text-amber-800 font-semibold mt-0.5">
+                    Specified Custom Role: &quot;{candidate.preferredJobRoleOther}&quot;
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-2">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold border ${
                       statusObj?.color || 'bg-slate-100 text-slate-800'
                     }`}
                   >
-                    Current Status: {statusObj?.label || currentStatus}
+                    Status: {statusObj?.label || currentStatus}
                   </span>
                 </div>
               </div>
@@ -256,41 +267,17 @@ export default function CandidateDetailPage() {
             </div>
           )}
 
-          {/* HR Internal Notes Section */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-              HR Recruitment Notes & Interview Remarks
-            </label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <textarea
-                rows={2}
-                placeholder="Enter notes about interview schedules, background checks, or candidate feedback..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleUpdateStatus}
-                disabled={savingStatus}
-                className="self-start sm:self-auto px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition-colors"
-              >
-                Save Notes
-              </button>
-            </div>
-          </div>
-
           {/* Details Grid */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Section 1: Personal Details */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
                 <User className="w-4 h-4 text-[#006B3C]" />
-                <span>1. Personal Details</span>
+                <span>Personal Details</span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div>
-                  <dt className="text-slate-400">Full Name</dt>
+                  <dt className="text-slate-400">Candidate Name</dt>
                   <dd className="font-semibold text-slate-900">{candidate.personalDetails.fullName}</dd>
                 </div>
                 <div>
@@ -300,12 +287,8 @@ export default function CandidateDetailPage() {
                 <div>
                   <dt className="text-slate-400">Date of Birth</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.personalDetails.dateOfBirth} (Age: {candidate.personalDetails.age} yrs)
+                    {candidate.personalDetails.dateOfBirth} ({candidate.personalDetails.age} yrs)
                   </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-400">Blood Group</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.bloodGroup}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Marital Status</dt>
@@ -319,46 +302,42 @@ export default function CandidateDetailPage() {
                   <dt className="text-slate-400">Mother&apos;s Name</dt>
                   <dd className="font-semibold text-slate-900">{candidate.personalDetails.mothersName}</dd>
                 </div>
-              </dl>
-            </div>
-
-            {/* Section 2: Contact Details */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
-                <Phone className="w-4 h-4 text-[#006B3C]" />
-                <span>2. Contact Details</span>
-              </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                {candidate.personalDetails.spouseName && (
+                  <div>
+                    <dt className="text-slate-400">Spouse Name</dt>
+                    <dd className="font-semibold text-slate-900">{candidate.personalDetails.spouseName}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-slate-400">Mobile Number</dt>
-                  <dd className="font-semibold text-[#006B3C]">{candidate.contactDetails.mobileNumber}</dd>
+                  <dd className="font-semibold text-[#006B3C]">{candidate.personalDetails.mobileNumber}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-400">Alt. Mobile</dt>
+                  <dt className="text-slate-400">Alt Mobile</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.contactDetails.alternativeMobileNumber || 'N/A'}
+                    {candidate.personalDetails.alternativeMobileNumber || 'N/A'}
                   </dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-slate-400">Email Address</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.contactDetails.email}</dd>
+                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.email}</dd>
                 </div>
-                {candidate.contactDetails.alternativeEmail && (
-                  <div className="col-span-2">
-                    <dt className="text-slate-400">Alt. Email</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {candidate.contactDetails.alternativeEmail}
-                    </dd>
-                  </div>
-                )}
+                <div>
+                  <dt className="text-slate-400">Aadhaar Number</dt>
+                  <dd className="font-mono font-semibold text-slate-900">{candidate.personalDetails.aadhaarNumber}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-400">PAN Number</dt>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.panNumber}</dd>
+                </div>
               </dl>
             </div>
 
-            {/* Section 3: Family Details */}
+            {/* Section 2: Family Details */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
                 <Users className="w-4 h-4 text-[#006B3C]" />
-                <span>3. Family Details</span>
+                <span>Family Details</span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div>
@@ -385,30 +364,22 @@ export default function CandidateDetailPage() {
                     {candidate.familyDetails?.mothersMobile || 'N/A'}
                   </dd>
                 </div>
-                {candidate.personalDetails.maritalStatus === 'Married' && (
-                  <>
-                    <div>
-                      <dt className="text-slate-400">Spouse Name</dt>
-                      <dd className="font-semibold text-slate-900">
-                        {candidate.familyDetails?.spouseName || 'N/A'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Marriage Date</dt>
-                      <dd className="font-semibold text-slate-900">
-                        {candidate.familyDetails?.marriageDate || 'N/A'}
-                      </dd>
-                    </div>
-                  </>
+                {candidate.familyDetails?.spouseOccupation && (
+                  <div>
+                    <dt className="text-slate-400">Spouse Occupation</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {candidate.familyDetails.spouseOccupation}
+                    </dd>
+                  </div>
                 )}
               </dl>
             </div>
 
-            {/* Section 4: Education Details */}
+            {/* Section 3: Education Details */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
                 <GraduationCap className="w-4 h-4 text-[#006B3C]" />
-                <span>4. Education Details</span>
+                <span>Education Details</span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div>
@@ -418,41 +389,33 @@ export default function CandidateDetailPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-400">Passing Year</dt>
+                  <dt className="text-slate-400">Year of Passing</dt>
                   <dd className="font-semibold text-slate-900">
                     {candidate.educationDetails.passingYear}
                   </dd>
                 </div>
                 <div className="col-span-2">
-                  <dt className="text-slate-400">School / College Name</dt>
+                  <dt className="text-slate-400">Institution Name</dt>
                   <dd className="font-semibold text-slate-900">
                     {candidate.educationDetails.institutionName}
                   </dd>
                 </div>
-                {candidate.educationDetails.additionalQualification && (
-                  <div>
-                    <dt className="text-slate-400">Additional Qualification</dt>
+                {candidate.educationDetails.educationDetails && (
+                  <div className="col-span-2">
+                    <dt className="text-slate-400">Education Details / Specialization</dt>
                     <dd className="font-semibold text-slate-900">
-                      {candidate.educationDetails.additionalQualification}
-                    </dd>
-                  </div>
-                )}
-                {candidate.educationDetails.percentageOrGrade && (
-                  <div>
-                    <dt className="text-slate-400">Percentage / Grade</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {candidate.educationDetails.percentageOrGrade}
+                      {candidate.educationDetails.educationDetails}
                     </dd>
                   </div>
                 )}
               </dl>
             </div>
 
-            {/* Section 5: Employment Details */}
+            {/* Section 4: Experience Details */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
                 <Briefcase className="w-4 h-4 text-[#006B3C]" />
-                <span>5. Employment Details</span>
+                <span>Experience Details</span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div>
@@ -464,75 +427,62 @@ export default function CandidateDetailPage() {
                 {candidate.employmentDetails.hasPreviousExperience && (
                   <>
                     <div>
-                      <dt className="text-slate-400">Previous Role</dt>
+                      <dt className="text-slate-400">Years of Experience</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.previousOccupation || 'N/A'}
+                        {candidate.employmentDetails.yearsOfExperience || candidate.employmentDetails.experienceDurationYears || 0} Years
                       </dd>
                     </div>
                     <div>
                       <dt className="text-slate-400">Previous Company</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.previousCompanyName || 'N/A'}
+                        {candidate.employmentDetails.previousCompany || candidate.employmentDetails.previousCompanyName || 'N/A'}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-400">Experience Duration</dt>
+                      <dt className="text-slate-400">Previous Designation</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.experienceDurationYears || 0} Yrs,{' '}
-                        {candidate.employmentDetails.experienceDurationMonths || 0} Mos
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Last Salary</dt>
-                      <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.lastDrawnSalary || 'N/A'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-400">Reason for Leaving</dt>
-                      <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.reasonForLeaving || 'N/A'}
+                        {candidate.employmentDetails.previousDesignation || candidate.employmentDetails.previousOccupation || 'N/A'}
                       </dd>
                     </div>
                   </>
                 )}
               </dl>
             </div>
-
-            {/* Section 6: Reference & Referral Details */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
-                <FileText className="w-4 h-4 text-[#006B3C]" />
-                <span>6. Referral & Other Information</span>
-              </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
-                <div>
-                  <dt className="text-slate-400">Referral Source</dt>
-                  <dd className="font-semibold text-slate-900">
-                    {candidate.referenceDetails.referralSource}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-400">Referrer Name</dt>
-                  <dd className="font-semibold text-slate-900">
-                    {candidate.referenceDetails.referrerName || 'N/A'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-400">Referrer Contact</dt>
-                  <dd className="font-semibold text-slate-900">
-                    {candidate.referenceDetails.referrerContact || 'N/A'}
-                  </dd>
-                </div>
-              </dl>
-            </div>
           </div>
 
-          {/* Section 7: Address Details (Full Width) */}
+          {/* Section 5: Other Details & Reference */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
+              <FileText className="w-4 h-4 text-[#006B3C]" />
+              <span>Other Details & Reference</span>
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <dt className="text-slate-400">How did you come to know about this job?</dt>
+                <dd className="font-semibold text-slate-900">
+                  {candidate.referenceDetails.referralSource}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-400">Reference Name</dt>
+                <dd className="font-semibold text-slate-900">
+                  {candidate.referenceDetails.referrerName || 'N/A'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-400">Additional Relevant Details</dt>
+                <dd className="font-semibold text-slate-900">
+                  {candidate.referenceDetails.additionalRemarks || 'None'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Section 6: Address Information */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
               <Home className="w-4 h-4 text-[#006B3C]" />
-              <span>7. Address Information</span>
+              <span>Address Information</span>
             </div>
             <div className="grid md:grid-cols-2 gap-6 text-xs">
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
@@ -543,7 +493,7 @@ export default function CandidateDetailPage() {
                   {candidate.addressDetails.permanentAddress.taluk},{' '}
                   {candidate.addressDetails.permanentAddress.district},{' '}
                   {candidate.addressDetails.permanentAddress.state} -{' '}
-                  <span className="font-semibold">
+                  <span className="font-semibold font-mono">
                     {candidate.addressDetails.permanentAddress.pincode}
                   </span>
                 </p>

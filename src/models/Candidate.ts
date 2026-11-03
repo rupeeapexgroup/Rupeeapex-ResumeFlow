@@ -9,10 +9,16 @@ const PersonalDetailsSchema = new Schema(
     dateOfBirth: { type: String, required: true },
     age: { type: Number, required: true },
     gender: { type: String, required: true, enum: ['Male', 'Female', 'Other'] },
-    bloodGroup: { type: String, required: true, trim: true },
+    bloodGroup: { type: String, trim: true },
     maritalStatus: { type: String, required: true, enum: ['Single', 'Married', 'Divorced', 'Widowed'] },
     fathersName: { type: String, required: true, trim: true },
     mothersName: { type: String, required: true, trim: true },
+    spouseName: { type: String, trim: true },
+    mobileNumber: { type: String, required: true, trim: true },
+    alternativeMobileNumber: { type: String, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    aadhaarNumber: { type: String, required: true, trim: true },
+    panNumber: { type: String, required: true, trim: true, uppercase: true },
   },
   { _id: false }
 );
@@ -23,6 +29,7 @@ const FamilyDetailsSchema = new Schema(
     fathersMobile: { type: String, trim: true },
     mothersOccupation: { type: String, trim: true },
     mothersMobile: { type: String, trim: true },
+    spouseOccupation: { type: String, trim: true },
     spouseName: { type: String, trim: true },
     marriageDate: { type: String },
     numberOfChildren: { type: Number, default: 0 },
@@ -32,9 +39,9 @@ const FamilyDetailsSchema = new Schema(
 
 const ContactDetailsSchema = new Schema(
   {
-    mobileNumber: { type: String, required: true, trim: true },
+    mobileNumber: { type: String, trim: true },
     alternativeMobileNumber: { type: String, trim: true },
-    email: { type: String, required: true, trim: true, lowercase: true },
+    email: { type: String, trim: true, lowercase: true },
     alternativeEmail: { type: String, trim: true, lowercase: true },
   },
   { _id: false }
@@ -64,6 +71,7 @@ const AddressDetailsSchema = new Schema(
 const EducationDetailsSchema = new Schema(
   {
     highestQualification: { type: String, required: true, trim: true },
+    educationDetails: { type: String, trim: true },
     institutionName: { type: String, required: true, trim: true },
     additionalQualification: { type: String, trim: true },
     passingYear: { type: String, required: true, trim: true },
@@ -75,6 +83,9 @@ const EducationDetailsSchema = new Schema(
 const EmploymentDetailsSchema = new Schema(
   {
     hasPreviousExperience: { type: Boolean, default: false },
+    previousCompany: { type: String, trim: true },
+    previousDesignation: { type: String, trim: true },
+    yearsOfExperience: { type: Number, default: 0 },
     previousOccupation: { type: String, trim: true },
     previousCompanyName: { type: String, trim: true },
     experienceDurationYears: { type: Number, default: 0 },
@@ -110,15 +121,19 @@ const CandidateSchema = new Schema<ICandidate>(
     },
     personalDetails: { type: PersonalDetailsSchema, required: true },
     familyDetails: { type: FamilyDetailsSchema, default: {} },
-    contactDetails: { type: ContactDetailsSchema, required: true },
+    contactDetails: { type: ContactDetailsSchema, default: {} },
     addressDetails: { type: AddressDetailsSchema, required: true },
     educationDetails: { type: EducationDetailsSchema, required: true },
     employmentDetails: { type: EmploymentDetailsSchema, default: {} },
     preferredJobRole: {
       type: String,
       required: true,
-      enum: ['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE'],
+      enum: ['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE', 'OTHER'],
       index: true,
+    },
+    preferredJobRoleOther: {
+      type: String,
+      trim: true,
     },
     referenceDetails: { type: ReferenceDetailsSchema, required: true },
     photographStorageKey: {
@@ -153,7 +168,13 @@ const CandidateSchema = new Schema<ICandidate>(
 );
 
 // Search indexes for rapid query performance
-CandidateSchema.index({ 'personalDetails.fullName': 'text', 'contactDetails.mobileNumber': 'text', applicationId: 'text' });
+CandidateSchema.index({
+  'personalDetails.fullName': 'text',
+  'personalDetails.mobileNumber': 'text',
+  'personalDetails.aadhaarNumber': 'text',
+  'personalDetails.panNumber': 'text',
+  applicationId: 'text',
+});
 CandidateSchema.index({ preferredJobRole: 1, applicationStatus: 1, submittedAt: -1 });
 
 export const Candidate = mongoose.models.Candidate || mongoose.model<ICandidate>('Candidate', CandidateSchema);

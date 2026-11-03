@@ -254,3 +254,4 @@ generateReceptionAssets().catch((e) => {
   console.error('Error generating reception assets:', e);
   process.exit(1);
 });
+

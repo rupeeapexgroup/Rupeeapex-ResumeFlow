@@ -6,16 +6,17 @@ import { getDashboardStats, getCandidates } from '@/services/candidateService';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import {
   Users,
-  FileCheck2,
+  Calendar,
   Clock,
   UserCheck,
   UserX,
   Award,
   ArrowRight,
   Search,
-  Filter,
   Eye,
-  Calendar,
+  Download,
+  QrCode,
+  FileCheck2,
 } from 'lucide-react';
 import { PREFERRED_JOB_ROLES, APPLICATION_STATUSES } from '@/lib/constants';
 
@@ -29,61 +30,15 @@ export default async function AdminDashboardPage() {
 
   const [stats, recentCandidatesData] = await Promise.all([
     getDashboardStats(),
-    getCandidates({ limit: 5, sortBy: 'submittedAt', sortOrder: 'desc' }),
+    getCandidates({ limit: 10, sortBy: 'submittedAt', sortOrder: 'desc' }),
   ]);
 
   const recentCandidates = recentCandidatesData.candidates;
-
-  const statCards = [
-    {
-      label: 'Total Applications',
-      count: stats.total,
-      icon: Users,
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
-      badgeColor: 'bg-blue-600',
-    },
-    {
-      label: 'New Applications',
-      count: stats.new,
-      icon: FileCheck2,
-      color: 'bg-sky-50 text-sky-700 border-sky-200',
-      badgeColor: 'bg-sky-600',
-    },
-    {
-      label: 'Under Review',
-      count: stats.underReview,
-      icon: Clock,
-      color: 'bg-amber-50 text-amber-700 border-amber-200',
-      badgeColor: 'bg-amber-600',
-    },
-    {
-      label: 'Shortlisted',
-      count: stats.shortlisted,
-      icon: Award,
-      color: 'bg-purple-50 text-purple-700 border-purple-200',
-      badgeColor: 'bg-purple-600',
-    },
-    {
-      label: 'Selected',
-      count: stats.selected,
-      icon: UserCheck,
-      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      badgeColor: 'bg-emerald-600',
-    },
-    {
-      label: 'Rejected',
-      count: stats.rejected,
-      icon: UserX,
-      color: 'bg-rose-50 text-rose-700 border-rose-200',
-      badgeColor: 'bg-rose-600',
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       <AdminSidebar currentUsername={session.username} />
 
-      {/* Main Content Area */}
       <main className="flex-1 lg:pl-64 flex flex-col">
         {/* Top Header */}
         <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
@@ -94,6 +49,15 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href="/qr/reception-poster.pdf"
+              download="Rupeeapex_Reception_Poster_A4.pdf"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+              title="Print Reception A4 Poster for Reception Desk"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-700" />
+              <span>Print Reception Poster</span>
+            </a>
             <Link
               href="/admin/candidates"
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#006B3C] hover:bg-[#005530] text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
@@ -106,59 +70,87 @@ export default async function AdminDashboardPage() {
 
         {/* Dashboard Body */}
         <div className="p-6 space-y-8 max-w-7xl w-full">
-          {/* 1. Statistics Cards Grid */}
+          {/* 1. Summary Cards */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                Application Pipeline Overview
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Application Summary
               </h2>
-              <span className="text-xs text-slate-400">Real-time counts from MongoDB</span>
+              <span className="text-xs text-slate-400">Live data from MongoDB</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {statCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <div
-                    key={card.label}
-                    className={`p-4 rounded-2xl border ${card.color} bg-white shadow-sm flex flex-col justify-between`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                        {card.label}
-                      </span>
-                      <Icon className="w-4 h-4 opacity-70" />
-                    </div>
-                    <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                      {card.count}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {/* Total Applications */}
+              <div className="p-5 rounded-2xl border border-blue-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Total Applications
+                  </span>
+                  <Users className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-3xl font-black text-slate-900">{stats.total}</div>
+                <div className="text-[11px] text-slate-500 mt-1">All time received</div>
+              </div>
+
+              {/* Today's Applications */}
+              <div className="p-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#006B3C]">
+                    Today&apos;s Applications
+                  </span>
+                  <Calendar className="w-4 h-4 text-[#006B3C]" />
+                </div>
+                <div className="text-3xl font-black text-[#006B3C]">{stats.today}</div>
+                <div className="text-[11px] text-emerald-700 mt-1 font-medium">Submitted today</div>
+              </div>
+
+              {/* Shortlisted */}
+              <div className="p-5 rounded-2xl border border-purple-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Shortlisted
+                  </span>
+                  <Award className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-3xl font-black text-slate-900">{stats.shortlisted}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Ready for interview</div>
+              </div>
+
+              {/* Selected */}
+              <div className="p-5 rounded-2xl border border-green-200 bg-white shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Selected
+                  </span>
+                  <UserCheck className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="text-3xl font-black text-slate-900">{stats.selected}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Hired candidates</div>
+              </div>
             </div>
           </section>
 
-          {/* 2. Role-wise Application Breakdown (Section 5 Requirement) */}
+          {/* 2. Applications by Preferred Job Role */}
           <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                  Role-Wise Application Breakdown
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Applications by Preferred Job Role
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Applications categorized by candidate preferred division
+                  Breakdown across all 6 roles including specified custom entries
                 </p>
               </div>
               <Link
                 href="/admin/candidates"
                 className="text-xs font-semibold text-[#006B3C] hover:underline inline-flex items-center gap-1"
               >
-                <span>Filter by Role</span>
+                <span>Filter Candidates</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {PREFERRED_JOB_ROLES.map((role) => {
                 const count = stats.roleCounts[role] || 0;
                 const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
@@ -166,40 +158,40 @@ export default async function AdminDashboardPage() {
                   <Link
                     key={role}
                     href={`/admin/candidates?role=${role}`}
-                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-emerald-50/50 hover:border-[#006B3C] transition-all group"
+                    className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-emerald-50/50 hover:border-[#006B3C] transition-all group"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-extrabold text-sm text-slate-900 group-hover:text-[#006B3C]">
+                      <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#006B3C]">
                         {role}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">
                         {percentage}%
                       </span>
                     </div>
-                    <div className="text-2xl font-black text-slate-800 mt-2">{count}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">applications</div>
+                    <div className="text-xl font-black text-slate-800 mt-1">{count}</div>
+                    <div className="text-[10px] text-slate-500">applicants</div>
                   </Link>
                 );
               })}
             </div>
           </section>
 
-          {/* 3. Recent Applications Table */}
+          {/* 3. Candidate Management Table */}
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                   Recent Applications
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Latest candidate submissions received via reception QR code
+                  Latest candidate submissions received through the common reception QR code
                 </p>
               </div>
               <Link
                 href="/admin/candidates"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#006B3C] hover:text-[#005530]"
               >
-                <span>View All Candidates</span>
+                <span>Open Full Management Table</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -210,37 +202,55 @@ export default async function AdminDashboardPage() {
                   <tr>
                     <th className="px-5 py-3.5">Application ID</th>
                     <th className="px-5 py-3.5">Candidate Name</th>
-                    <th className="px-5 py-3.5">Mobile</th>
-                    <th className="px-5 py-3.5">Preferred Role</th>
-                    <th className="px-5 py-3.5">Date</th>
-                    <th className="px-5 py-3.5">Status</th>
-                    <th className="px-5 py-3.5 text-right">Action</th>
+                    <th className="px-5 py-3.5">Mobile Number</th>
+                    <th className="px-5 py-3.5">Education</th>
+                    <th className="px-5 py-3.5">Experience</th>
+                    <th className="px-5 py-3.5">Preferred Job Role</th>
+                    <th className="px-5 py-3.5">Application Date</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {recentCandidates.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
-                        No candidate applications submitted yet. Applications will appear here once candidates scan the reception QR code.
+                      <td colSpan={8} className="px-5 py-8 text-center text-slate-500">
+                        No candidate applications submitted yet.
                       </td>
                     </tr>
                   ) : (
                     recentCandidates.map((c: any) => {
-                      const statusObj = APPLICATION_STATUSES.find((s) => s.value === c.applicationStatus);
+                      const roleDisplay = c.preferredJobRole === 'OTHER' && c.preferredJobRoleOther
+                        ? `OTHER (${c.preferredJobRoleOther})`
+                        : c.preferredJobRole;
+
+                      const expDisplay = c.employmentDetails?.hasPreviousExperience
+                        ? `${c.employmentDetails.yearsOfExperience || c.employmentDetails.experienceDurationYears || 1} Yrs`
+                        : 'Fresher';
+
                       return (
                         <tr key={c._id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="px-5 py-3.5 font-mono font-bold text-[#006B3C]">
-                            {c.applicationId}
+                            <Link href={`/admin/candidates/${c._id}`} className="hover:underline">
+                              {c.applicationId}
+                            </Link>
                           </td>
                           <td className="px-5 py-3.5 font-semibold text-slate-900">
                             {c.personalDetails.fullName}
                           </td>
                           <td className="px-5 py-3.5 text-slate-600">
-                            {c.contactDetails.mobileNumber}
+                            {c.personalDetails.mobileNumber}
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-600">
+                            {c.educationDetails.highestQualification}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.employmentDetails?.hasPreviousExperience ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                              {expDisplay}
+                            </span>
                           </td>
                           <td className="px-5 py-3.5">
                             <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 rounded-md">
-                              {c.preferredJobRole}
+                              {roleDisplay}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-slate-500">
@@ -250,23 +260,24 @@ export default async function AdminDashboardPage() {
                               year: 'numeric',
                             })}
                           </td>
-                          <td className="px-5 py-3.5">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                                statusObj?.color || 'bg-slate-100 text-slate-700'
-                              }`}
-                            >
-                              {statusObj?.label || c.applicationStatus}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <Link
-                              href={`/admin/candidates/${c._id}`}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-[#006B3C] hover:text-white rounded-lg text-slate-700 font-medium transition-colors"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>View</span>
-                            </Link>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <Link
+                                href={`/admin/candidates/${c._id}`}
+                                title="View Complete Application Details"
+                                className="p-1.5 text-slate-600 hover:text-[#006B3C] hover:bg-slate-100 rounded-lg transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Link>
+                              <a
+                                href={`/api/candidates/${c._id}/pdf`}
+                                download={`Candidate_${c.applicationId}.pdf`}
+                                title="Download Official Application PDF"
+                                className="p-1.5 text-slate-600 hover:text-[#006B3C] hover:bg-slate-100 rounded-lg transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            </div>
                           </td>
                         </tr>
                       );

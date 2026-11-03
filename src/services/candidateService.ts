@@ -9,6 +9,8 @@ export interface CandidateFilterParams {
   search?: string;
   role?: string;
   status?: string;
+  education?: string;
+  experience?: string; // 'ALL' | 'experienced' | 'fresher'
   dateRange?: string; // 'today' | '7days' | '30days' | 'custom'
   startDate?: string;
   endDate?: string;
@@ -39,9 +41,16 @@ export async function submitApplication(
   // 4. Save Candidate record in MongoDB
   const candidate = await Candidate.create({
     applicationId,
-    personalDetails: data.personalDetails,
+    personalDetails: {
+      ...data.personalDetails,
+      panNumber: data.personalDetails.panNumber.toUpperCase(),
+    },
     familyDetails: data.familyDetails,
-    contactDetails: data.contactDetails,
+    contactDetails: {
+      mobileNumber: data.personalDetails.mobileNumber,
+      alternativeMobileNumber: data.personalDetails.alternativeMobileNumber,
+      email: data.personalDetails.email,
+    },
     addressDetails: {
       permanentAddress: data.addressDetails.permanentAddress,
       temporaryAddress,
@@ -50,6 +59,7 @@ export async function submitApplication(
     educationDetails: data.educationDetails,
     employmentDetails: data.employmentDetails,
     preferredJobRole: data.preferredJobRole,
+    preferredJobRoleOther: data.preferredJobRole === 'OTHER' ? data.preferredJobRoleOther : undefined,
     referenceDetails: data.referenceDetails,
     photographStorageKey: storageKey,
     photographFileName: photoOriginalName,
@@ -69,15 +79,18 @@ export async function getCandidates(params: CandidateFilterParams) {
 
   const query: any = {};
 
-  // Search filter (Application ID, Candidate Name, Mobile Number)
+  // Search filter (Application ID, Candidate Name, Mobile Number, Aadhaar, PAN)
   if (params.search && params.search.trim()) {
     const term = params.search.trim();
     const regex = new RegExp(term, 'i');
     query.$or = [
       { applicationId: regex },
       { 'personalDetails.fullName': regex },
+      { 'personalDetails.mobileNumber': regex },
+      { 'personalDetails.email': regex },
+      { 'personalDetails.aadhaarNumber': regex },
+      { 'personalDetails.panNumber': regex },
       { 'contactDetails.mobileNumber': regex },
-      { 'contactDetails.email': regex },
     ];
   }
 
@@ -89,6 +102,20 @@ export async function getCandidates(params: CandidateFilterParams) {
   // Status filter
   if (params.status && params.status !== 'ALL') {
     query.applicationStatus = params.status;
+  }
+
+  // Education filter
+  if (params.education && params.education !== 'ALL') {
+    query['educationDetails.highestQualification'] = new RegExp(params.education.trim(), 'i');
+  }
+
+  // Experience filter
+  if (params.experience && params.experience !== 'ALL') {
+    if (params.experience === 'experienced') {
+      query['employmentDetails.hasPreviousExperience'] = true;
+    } else if (params.experience === 'fresher') {
+      query['employmentDetails.hasPreviousExperience'] = false;
+    }
   }
 
   // Date filters
@@ -211,8 +238,12 @@ export async function updateCandidateStatus(
 export async function getDashboardStats(): Promise<DashboardStats> {
   await connectToDatabase();
 
-  const [total, statusCounts, roleCountsAgg] = await Promise.all([
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [total, todayCount, statusCounts, roleCountsAgg] = await Promise.all([
     Candidate.countDocuments({}),
+    Candidate.countDocuments({ submittedAt: { $gte: startOfToday } }),
     Candidate.aggregate([
       {
         $group: {
@@ -233,6 +264,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const stats: DashboardStats = {
     total,
+    today: todayCount,
     new: 0,
     underReview: 0,
     shortlisted: 0,
@@ -244,6 +276,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       MFI: 0,
       CHIT: 0,
       INSURANCE: 0,
+      OTHER: 0,
     },
   };
 
@@ -256,7 +289,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   });
 
   roleCountsAgg.forEach((r) => {
-    if (['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE'].includes(r._id)) {
+    if (['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE', 'OTHER'].includes(r._id)) {
       stats.roleCounts[r._id as PreferredJobRole] = r.count;
     }
   });

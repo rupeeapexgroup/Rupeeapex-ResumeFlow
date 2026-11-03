@@ -249,3 +249,4 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Primary Corporate Color**: `#006B3C` (Rupeeapex Forest Green)
 - **Secondary Accent Color**: `#F5C400` (Rupeeapex Gold)
 - **System Version**: ResumeFlow v1.0 Production
+
