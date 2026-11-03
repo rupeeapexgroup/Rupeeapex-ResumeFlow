@@ -1,0 +1,265 @@
+import { connectToDatabase } from '@/lib/mongodb';
+import { Candidate, ICandidate } from '@/models/Candidate';
+import { getNextApplicationId } from '@/models/Counter';
+import { saveCandidatePhotograph } from '@/lib/storage';
+import { CandidateApplicationInput } from '@/lib/validation';
+import { DashboardStats, PreferredJobRole, ApplicationStatus, CandidateRecord } from '@/types';
+
+export interface CandidateFilterParams {
+  search?: string;
+  role?: string;
+  status?: string;
+  dateRange?: string; // 'today' | '7days' | '30days' | 'custom'
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export async function submitApplication(
+  data: CandidateApplicationInput,
+  photoBuffer: Buffer,
+  photoOriginalName: string
+): Promise<{ applicationId: string; candidateId: string }> {
+  await connectToDatabase();
+
+  // 1. Save photo to private storage
+  const { storageKey, mimeType } = await saveCandidatePhotograph(photoBuffer, photoOriginalName);
+
+  // 2. Generate unique atomic Application ID
+  const applicationId = await getNextApplicationId();
+
+  // 3. Normalize address if "sameAsPermanent" is selected
+  const temporaryAddress = data.addressDetails.sameAsPermanent
+    ? { ...data.addressDetails.permanentAddress }
+    : data.addressDetails.temporaryAddress;
+
+  // 4. Save Candidate record in MongoDB
+  const candidate = await Candidate.create({
+    applicationId,
+    personalDetails: data.personalDetails,
+    familyDetails: data.familyDetails,
+    contactDetails: data.contactDetails,
+    addressDetails: {
+      permanentAddress: data.addressDetails.permanentAddress,
+      temporaryAddress,
+      sameAsPermanent: data.addressDetails.sameAsPermanent,
+    },
+    educationDetails: data.educationDetails,
+    employmentDetails: data.employmentDetails,
+    preferredJobRole: data.preferredJobRole,
+    referenceDetails: data.referenceDetails,
+    photographStorageKey: storageKey,
+    photographFileName: photoOriginalName,
+    photographMimeType: mimeType,
+    applicationStatus: 'NEW',
+    submittedAt: new Date(),
+  });
+
+  return {
+    applicationId: candidate.applicationId,
+    candidateId: candidate._id.toString(),
+  };
+}
+
+export async function getCandidates(params: CandidateFilterParams) {
+  await connectToDatabase();
+
+  const query: any = {};
+
+  // Search filter (Application ID, Candidate Name, Mobile Number)
+  if (params.search && params.search.trim()) {
+    const term = params.search.trim();
+    const regex = new RegExp(term, 'i');
+    query.$or = [
+      { applicationId: regex },
+      { 'personalDetails.fullName': regex },
+      { 'contactDetails.mobileNumber': regex },
+      { 'contactDetails.email': regex },
+    ];
+  }
+
+  // Role filter
+  if (params.role && params.role !== 'ALL') {
+    query.preferredJobRole = params.role;
+  }
+
+  // Status filter
+  if (params.status && params.status !== 'ALL') {
+    query.applicationStatus = params.status;
+  }
+
+  // Date filters
+  const now = new Date();
+  if (params.dateRange === 'today') {
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    query.submittedAt = { $gte: startOfDay };
+  } else if (params.dateRange === '7days') {
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    query.submittedAt = { $gte: sevenDaysAgo };
+  } else if (params.dateRange === '30days') {
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    query.submittedAt = { $gte: thirtyDaysAgo };
+  } else if (params.startDate || params.endDate) {
+    const dateQuery: any = {};
+    if (params.startDate) {
+      dateQuery.$gte = new Date(params.startDate);
+    }
+    if (params.endDate) {
+      const end = new Date(params.endDate);
+      end.setHours(23, 59, 59, 999);
+      dateQuery.$lte = end;
+    }
+    query.submittedAt = dateQuery;
+  }
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(params.limit) || 10));
+  const skip = (page - 1) * limit;
+
+  let sortField = 'submittedAt';
+  let sortDir: 1 | -1 = -1;
+
+  if (params.sortBy) {
+    if (params.sortBy === 'name') sortField = 'personalDetails.fullName';
+    else if (params.sortBy === 'applicationId') sortField = 'applicationId';
+    else if (params.sortBy === 'role') sortField = 'preferredJobRole';
+    else if (params.sortBy === 'status') sortField = 'applicationStatus';
+    else sortField = params.sortBy;
+  }
+
+  if (params.sortOrder === 'asc') {
+    sortDir = 1;
+  }
+
+  const [candidates, totalCount] = await Promise.all([
+    Candidate.find(query)
+      .sort({ [sortField]: sortDir })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Candidate.countDocuments(query),
+  ]);
+
+  return {
+    candidates: (candidates as any[]).map((c) => ({
+      ...c,
+      _id: String(c._id),
+      submittedAt: c.submittedAt ? new Date(c.submittedAt).toISOString() : new Date().toISOString(),
+      updatedAt: c.updatedAt ? new Date(c.updatedAt).toISOString() : new Date().toISOString(),
+    })),
+    pagination: {
+      total: totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit) || 1,
+    },
+  };
+}
+
+export async function getCandidateById(idOrAppId: string): Promise<CandidateRecord | null> {
+  await connectToDatabase();
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(idOrAppId);
+  const query = isObjectId
+    ? { $or: [{ _id: idOrAppId }, { applicationId: idOrAppId }] }
+    : { applicationId: idOrAppId };
+
+  const candidate = await Candidate.findOne(query).lean();
+  if (!candidate) return null;
+
+  return {
+    ...(candidate as any),
+    _id: String((candidate as any)._id),
+    submittedAt: (candidate as any).submittedAt ? new Date((candidate as any).submittedAt).toISOString() : new Date().toISOString(),
+    updatedAt: (candidate as any).updatedAt ? new Date((candidate as any).updatedAt).toISOString() : new Date().toISOString(),
+  } as unknown as CandidateRecord;
+}
+
+export async function updateCandidateStatus(
+  idOrAppId: string,
+  status: ApplicationStatus,
+  notes?: string
+): Promise<CandidateRecord | null> {
+  await connectToDatabase();
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(idOrAppId);
+  const query = isObjectId
+    ? { $or: [{ _id: idOrAppId }, { applicationId: idOrAppId }] }
+    : { applicationId: idOrAppId };
+
+  const update: any = {
+    applicationStatus: status,
+    updatedAt: new Date(),
+  };
+
+  if (notes !== undefined) {
+    update.statusNotes = notes;
+  }
+
+  const updated = await Candidate.findOneAndUpdate(query, update, { new: true }).lean();
+  if (!updated) return null;
+
+  return {
+    ...(updated as any),
+    _id: String((updated as any)._id),
+  } as unknown as CandidateRecord;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  await connectToDatabase();
+
+  const [total, statusCounts, roleCountsAgg] = await Promise.all([
+    Candidate.countDocuments({}),
+    Candidate.aggregate([
+      {
+        $group: {
+          _id: '$applicationStatus',
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Candidate.aggregate([
+      {
+        $group: {
+          _id: '$preferredJobRole',
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const stats: DashboardStats = {
+    total,
+    new: 0,
+    underReview: 0,
+    shortlisted: 0,
+    rejected: 0,
+    selected: 0,
+    roleCounts: {
+      GOLD: 0,
+      NIDHI: 0,
+      MFI: 0,
+      CHIT: 0,
+      INSURANCE: 0,
+    },
+  };
+
+  statusCounts.forEach((s) => {
+    if (s._id === 'NEW') stats.new = s.count;
+    else if (s._id === 'UNDER_REVIEW') stats.underReview = s.count;
+    else if (s._id === 'SHORTLISTED') stats.shortlisted = s.count;
+    else if (s._id === 'REJECTED') stats.rejected = s.count;
+    else if (s._id === 'SELECTED') stats.selected = s.count;
+  });
+
+  roleCountsAgg.forEach((r) => {
+    if (['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE'].includes(r._id)) {
+      stats.roleCounts[r._id as PreferredJobRole] = r.count;
+    }
+  });
+
+  return stats;
+}
