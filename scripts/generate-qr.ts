@@ -74,15 +74,17 @@ async function generateReceptionAssets() {
     const bannerPath = path.join(process.cwd(), 'public', 'logo', 'Rupeeapex-fullBanner.jpeg');
     const bannerBytes = await fs.readFile(bannerPath);
     const bannerImage = await pdfDoc.embedJpg(bannerBytes);
-    const bWidth = width - 70;
-    const bHeight = 85;
+    const aspectRatio = bannerImage.width / bannerImage.height;
+    const bWidth = 260;
+    const bHeight = Math.round(bWidth / aspectRatio);
+    const bX = (width - bWidth) / 2;
     page.drawImage(bannerImage, {
-      x: 35,
+      x: bX,
       y: currentY - bHeight,
       width: bWidth,
       height: bHeight,
     });
-    currentY -= (bHeight + 20);
+    currentY -= (bHeight + 16);
   } catch (err) {
     page.drawRectangle({
       x: 35,
@@ -172,27 +174,15 @@ async function generateReceptionAssets() {
     height: qrBoxSize,
   });
 
-  currentY = qrBoxY - 25;
+  // 4 Steps Guide (Centered comfortably below QR box)
+  const stepsCardY = qrBoxY - 35;
+  const stepsCardHeight = 112;
 
-  // Direct URL text
-  const urlLabel = `Direct Link: ${applyUrl}`;
-  const urlWidth = fontRegular.widthOfTextAtSize(urlLabel, 10);
-  page.drawText(urlLabel, {
-    x: (width - urlWidth) / 2,
-    y: currentY,
-    size: 10,
-    font: fontRegular,
-    color: grayText,
-  });
-
-  currentY -= 35;
-
-  // 4 Steps Guide
   page.drawRectangle({
     x: 45,
-    y: currentY - 95,
+    y: stepsCardY - stepsCardHeight,
     width: width - 90,
-    height: 105,
+    height: stepsCardHeight,
     color: rgb(1, 1, 1),
     borderColor: rgb(226 / 255, 232 / 255, 240 / 255),
     borderWidth: 1,
@@ -200,7 +190,7 @@ async function generateReceptionAssets() {
 
   page.drawText('APPLICATION PROCESS STEPS:', {
     x: 60,
-    y: currentY - 10,
+    y: stepsCardY - 20,
     size: 11,
     font: fontBold,
     color: primaryGreen,
@@ -213,7 +203,7 @@ async function generateReceptionAssets() {
     '4. Take or upload your photograph, accept declaration and tap Submit Application.',
   ];
 
-  let stepY = currentY - 28;
+  let stepY = stepsCardY - 40;
   steps.forEach((step) => {
     page.drawText(step, {
       x: 60,
@@ -225,11 +215,21 @@ async function generateReceptionAssets() {
     stepY -= 18;
   });
 
-  // Footer notes
-  page.drawText('Rupeeapex Groups of Companies - Empowering Growth & Prosperity', {
-    x: 80,
-    y: 42,
-    size: 9,
+  // Elegant Footer Divider
+  page.drawLine({
+    start: { x: 50, y: 82 },
+    end: { x: width - 50, y: 82 },
+    thickness: 0.8,
+    color: rgb(226 / 255, 232 / 255, 240 / 255),
+  });
+
+  // Centered Footer Content with comfortable padding from border
+  const footerTitle = 'Rupeeapex Groups of Companies - Empowering Growth & Prosperity';
+  const footerTitleWidth = fontBold.widthOfTextAtSize(footerTitle, 10);
+  page.drawText(footerTitle, {
+    x: (width - footerTitleWidth) / 2,
+    y: 62,
+    size: 10,
     font: fontBold,
     color: primaryGreen,
   });
@@ -238,8 +238,8 @@ async function generateReceptionAssets() {
   const helpTextWidth = fontRegular.widthOfTextAtSize(helpText, 9);
   page.drawText(helpText, {
     x: (width - helpTextWidth) / 2,
-    y: 30,
-    size: 8.5,
+    y: 46,
+    size: 9,
     font: fontRegular,
     color: grayText,
   });

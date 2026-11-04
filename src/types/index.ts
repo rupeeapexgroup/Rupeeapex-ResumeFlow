@@ -57,6 +57,7 @@ export interface EducationDetails {
 export interface EmploymentDetails {
   hasPreviousExperience: boolean;
   previousCompany?: string;
+  previousCompanyName?: string;
   previousDesignation?: string;
   yearsOfExperience?: number;
   experienceDurationYears?: number;
@@ -78,6 +79,7 @@ export interface CandidateRecord {
   applicationId: string;
   personalDetails: PersonalDetails;
   familyDetails: FamilyDetails;
+  contactDetails?: any;
   addressDetails: AddressDetails;
   educationDetails: EducationDetails;
   employmentDetails: EmploymentDetails;

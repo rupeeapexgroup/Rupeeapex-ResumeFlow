@@ -23,6 +23,7 @@ import {
   Printer,
   UploadCloud,
   FileCheck,
+  X,
 } from 'lucide-react';
 
 export default function CandidateApplyPage() {
@@ -99,8 +100,26 @@ export default function CandidateApplyPage() {
 
   // Submission & UI states
   const [submitting, setSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [submittedAppId, setSubmittedAppId] = useState<string | null>(null);
+  const [popupError, setPopupError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Error tracking helpers
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const copy = { ...prev };
+      delete copy[field];
+      return copy;
+    });
+  };
+
+  const getFieldClass = (field: string, baseClasses: string) => {
+    if (fieldErrors[field]) {
+      return `${baseClasses} !border-red-500 !ring-2 !ring-red-200 !bg-red-50/40`;
+    }
+    return baseClasses;
+  };
 
   // Auto-calculate age when DOB changes
   const handleDobChange = (dobStr: string) => {
@@ -132,17 +151,21 @@ export default function CandidateApplyPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-      setErrorMessage('Please select a valid image file (JPEG or PNG format only).');
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(file.name);
+    if (!isImage) {
+      setFieldErrors(prev => ({ ...prev, photograph: 'Please select a valid image file (JPEG or PNG format only).' }));
+      setPopupError('Please select a valid image file (JPEG or PNG format only).');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Photograph size must be less than 5 MB.');
+      setFieldErrors(prev => ({ ...prev, photograph: 'Photograph size must be less than 5 MB.' }));
+      setPopupError('Photograph size must be less than 5 MB.');
       return;
     }
 
-    setErrorMessage('');
+    clearFieldError('photograph');
+    setPopupError(null);
     setPhotoFile(file);
     const reader = new FileReader();
     reader.onload = () => {
@@ -168,37 +191,86 @@ export default function CandidateApplyPage() {
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
+    setPopupError(null);
+    const newErrors: Record<string, string> = {};
 
-    // Pre-flight checks
+    // Validate Photograph
     if (!photoFile) {
-      setErrorMessage('Candidate photograph is required. Please upload or take your photo.');
-      window.scrollTo({ top: 300, behavior: 'smooth' });
-      return;
+      newErrors['photograph'] = 'Candidate photograph is required.';
     }
 
-    if (!formData.preferredJobRole) {
-      setErrorMessage('Please select your PREFERRED JOB ROLE.');
-      return;
+    // Validate Personal Details
+    if (!formData.personalDetails.fullName.trim()) {
+      newErrors['fullName'] = 'Candidate Name is required as per Aadhaar.';
     }
-
-    if (formData.preferredJobRole === 'OTHER' && !formData.preferredJobRoleOther.trim()) {
-      setErrorMessage('Please specify your preferred job role.');
-      return;
+    if (!formData.personalDetails.dateOfBirth) {
+      newErrors['dateOfBirth'] = 'Valid Date of Birth is required.';
     }
-
+    if (!formData.personalDetails.fathersName.trim()) {
+      newErrors['fathersName'] = "Father's Name is required.";
+    }
+    if (!formData.personalDetails.mothersName.trim()) {
+      newErrors['mothersName'] = "Mother's Name is required.";
+    }
+    if (!formData.personalDetails.mobileNumber || !/^[6-9]\d{9}$/.test(formData.personalDetails.mobileNumber)) {
+      newErrors['mobileNumber'] = 'Enter a valid 10-digit Indian Mobile Number.';
+    }
+    if (!formData.personalDetails.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.personalDetails.email)) {
+      newErrors['email'] = 'Enter a valid Email Address.';
+    }
     if (!formData.personalDetails.aadhaarNumber || !/^\d{12}$/.test(formData.personalDetails.aadhaarNumber)) {
-      setErrorMessage('Please enter a valid 12-digit Aadhaar Number.');
-      return;
+      newErrors['aadhaarNumber'] = 'Enter a valid 12-digit Aadhaar Number.';
     }
-
     if (!formData.personalDetails.panNumber || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.personalDetails.panNumber)) {
-      setErrorMessage('Please enter a valid 10-character PAN Number (e.g. ABCDE1234F).');
-      return;
+      newErrors['panNumber'] = 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F).';
     }
 
+    // Validate Address Details
+    if (!formData.addressDetails.permanentAddress.doorNoStreet.trim()) {
+      newErrors['doorNoStreet'] = 'Door Number / Street is required.';
+    }
+    if (!formData.addressDetails.permanentAddress.villageOrArea.trim()) {
+      newErrors['villageOrArea'] = 'Village / Area is required.';
+    }
+    if (!formData.addressDetails.permanentAddress.taluk.trim()) {
+      newErrors['taluk'] = 'Taluk is required.';
+    }
+    if (!formData.addressDetails.permanentAddress.district.trim()) {
+      newErrors['district'] = 'District is required.';
+    }
+    if (!formData.addressDetails.permanentAddress.pincode || !/^\d{6}$/.test(formData.addressDetails.permanentAddress.pincode)) {
+      newErrors['pincode'] = 'Enter a valid 6-digit PIN Code.';
+    }
+
+    // Validate Education Details
+    if (!formData.educationDetails.highestQualification) {
+      newErrors['highestQualification'] = 'Highest Qualification is required.';
+    }
+    if (!formData.educationDetails.institutionName.trim()) {
+      newErrors['institutionName'] = 'Institution Name is required.';
+    }
+    if (!formData.educationDetails.passingYear || !/^(19|20)\d{2}$/.test(formData.educationDetails.passingYear)) {
+      newErrors['passingYear'] = 'Enter a valid 4-digit Passing Year.';
+    }
+
+    // Validate Preferred Job Role
+    if (!formData.preferredJobRole) {
+      newErrors['preferredJobRole'] = 'Please select your Preferred Job Role.';
+    }
+    if (formData.preferredJobRole === 'OTHER' && !formData.preferredJobRoleOther.trim()) {
+      newErrors['preferredJobRoleOther'] = 'Please specify your preferred job role.';
+    }
+
+    // Validate Declaration
     if (!formData.declarationAccepted) {
-      setErrorMessage('You must review and agree to the candidate declaration before submitting.');
+      newErrors['declarationAccepted'] = 'You must accept the candidate declaration before submitting.';
+    }
+
+    // If any validation failed, set errors and show popup
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      const firstMessage = Object.values(newErrors)[0];
+      setPopupError(firstMessage);
       return;
     }
 
@@ -221,7 +293,7 @@ export default function CandidateApplyPage() {
 
       const sendFormData = new FormData();
       sendFormData.append('data', JSON.stringify(payload));
-      sendFormData.append('photograph', photoFile);
+      sendFormData.append('photograph', photoFile!);
 
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -231,74 +303,58 @@ export default function CandidateApplyPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to submit application. Please check all fields.');
+        if (data.details && Array.isArray(data.details)) {
+          const apiErrors: Record<string, string> = {};
+          data.details.forEach((issue: any) => {
+            const key = issue.path[issue.path.length - 1];
+            apiErrors[key] = issue.message;
+          });
+          setFieldErrors(apiErrors);
+        }
+        setPopupError(data.error || 'Failed to submit application. Please review the highlighted fields in red.');
         setSubmitting(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
-      setSubmittedAppId(data.applicationId);
+      setIsSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      setErrorMessage('Network connection error while submitting. Please try again.');
+      setPopupError('Network connection error while submitting. Please check your internet connection and try again.');
       setSubmitting(false);
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   // ==========================================
-  // SUCCESS SCREEN
+  // SUCCESS SCREEN (Clean & Welcoming)
   // ==========================================
-  if (submittedAppId) {
+  if (isSubmitted) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center px-4 py-12">
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 sm:p-10 text-center max-w-xl w-full relative overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 sm:p-12 text-center max-w-lg w-full relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-3 bg-[#006B3C]"></div>
 
-          <div className="w-16 h-16 bg-emerald-100 text-[#006B3C] rounded-full mx-auto flex items-center justify-center mb-5">
+          {/* Rupeeapex Logo */}
+          <div className="relative w-[260px] h-[80px] mx-auto mb-6">
+            <Image
+              src="/logo/rupeeapex-logo.jpeg"
+              alt="Rupeeapex Logo"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+
+          <div className="w-16 h-16 bg-emerald-100 text-[#006B3C] rounded-full mx-auto flex items-center justify-center mb-5 shadow-inner">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">
-            Your job application has been submitted successfully. Thank you for applying to Rupeeapex Groups of Companies.
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
+            Thank You for Submitting!
           </h1>
 
-          {/* Application ID Card */}
-          <div className="bg-emerald-50/80 border-2 border-dashed border-[#006B3C] rounded-2xl p-5 my-6">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-              Candidate Application ID
-            </span>
-            <div className="text-2xl sm:text-3xl font-mono font-extrabold text-[#006B3C] tracking-wider my-1.5">
-              {submittedAppId}
-            </div>
-            <p className="text-xs text-slate-600">
-              Candidate: <span className="font-semibold text-slate-900">{formData.personalDetails.fullName}</span> | Preferred Role: <span className="font-bold text-slate-900">{formData.preferredJobRole === 'OTHER' ? formData.preferredJobRoleOther : formData.preferredJobRole}</span>
-            </p>
-          </div>
-
-          <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-600 text-left space-y-1.5 mb-6 border border-slate-200">
-            <p>• Please note down or take a screenshot of your <strong>Application ID</strong> for reference.</p>
-            <p>• Our HR department will review your application and contact you directly on <strong>{formData.personalDetails.mobileNumber}</strong>.</p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl text-xs transition-colors"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Confirmation</span>
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#006B3C] hover:bg-[#005530] text-white font-semibold rounded-xl text-xs transition-colors shadow-sm"
-            >
-              <span>Submit Another Application</span>
-            </button>
-          </div>
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium">
+            Your application has been received successfully. Our HR team will review your details and reach out to you if your profile matches our requirements.
+          </p>
         </div>
       </div>
     );
@@ -330,78 +386,37 @@ export default function CandidateApplyPage() {
           </p>
         </div>
 
-        {/* Global Error Banner */}
-        {errorMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-sm text-red-700 animate-fadeIn">
-            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-            <div className="leading-relaxed font-medium">{errorMessage}</div>
+        {/* Floating Notification Popup Modal */}
+        {popupError && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl border border-red-100 max-w-sm w-full p-6 text-center relative animate-scaleUp">
+              <button
+                type="button"
+                onClick={() => setPopupError(null)}
+                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1.5">Please Check Details</h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-5 font-medium">
+                {popupError}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPopupError(null)}
+                className="w-full py-2.5 px-4 bg-[#006B3C] hover:bg-[#005530] text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-sm"
+              >
+                OK, Got It
+              </button>
+            </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* ==================================================== */}
-          {/* SECTION: PREFERRED JOB ROLE (DROPDOWN + CONDITIONAL "OTHER") */}
-          {/* ==================================================== */}
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-emerald-600 overflow-hidden">
-            <div className="bg-emerald-50 px-6 py-3.5 border-b border-emerald-100 flex items-center gap-2.5">
-              <Star className="w-5 h-5 text-[#006B3C]" />
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                PREFERRED JOB ROLE <span className="text-red-500">*</span>
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  What role do you prefer? <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.preferredJobRole}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      preferredJobRole: e.target.value as any,
-                      preferredJobRoleOther: e.target.value === 'OTHER' ? prev.preferredJobRoleOther : '',
-                    }))
-                  }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                >
-                  <option value="">-- Select Preferred Job Role --</option>
-                  {PREFERRED_JOB_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Conditional manual role input when "OTHER" is selected */}
-              {formData.preferredJobRole === 'OTHER' && (
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 animate-fadeIn">
-                  <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-1.5">
-                    Please specify your preferred job role <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Customer Relationship Executive / Branch Manager"
-                    value={formData.preferredJobRoleOther}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        preferredJobRoleOther: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                  />
-                  <p className="text-[11px] text-amber-800 mt-1.5">
-                    Manually enter the exact title or department you are applying for.
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-
           {/* ==================================================== */}
           {/* SECTION: CANDIDATE PHOTO UPLOAD */}
           {/* ==================================================== */}
@@ -414,7 +429,7 @@ export default function CandidateApplyPage() {
             </div>
             <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
               {/* Photo Preview */}
-              <div className="w-32 h-40 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative">
+              <div className={`w-32 h-40 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden shrink-0 relative transition-all ${fieldErrors['photograph'] ? 'border-red-500 ring-4 ring-red-200 bg-red-50/50' : 'border-slate-300 bg-slate-50'}`}>
                 {photoPreview ? (
                   <Image
                     src={photoPreview}
@@ -433,29 +448,29 @@ export default function CandidateApplyPage() {
               {/* Upload controls */}
               <div className="flex-1 text-center sm:text-left space-y-3">
                 <input
+                  id="candidate-photo-input"
                   type="file"
                   ref={fileInputRef}
-                  accept="image/jpeg,image/png,image/jpg"
-                  capture="user"
+                  accept="image/*"
                   onChange={handlePhotoSelect}
-                  className="hidden"
+                  className="sr-only"
                 />
 
                 <div className="flex flex-wrap gap-2.5 justify-center sm:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#006B3C] hover:bg-[#005530] text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                  <label
+                    htmlFor="candidate-photo-input"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#006B3C] hover:bg-[#005530] text-white text-xs font-semibold rounded-xl transition-colors shadow-sm cursor-pointer select-none active:scale-95"
                   >
                     <UploadCloud className="w-4 h-4" />
-                    <span>{photoFile ? 'Replace Photograph' : 'Upload or Take Photo'}</span>
-                  </button>
+                    <span>{photoFile ? 'Change Photograph' : 'Upload or Take Photo'}</span>
+                  </label>
                   {photoFile && (
                     <button
                       type="button"
                       onClick={() => {
                         setPhotoFile(null);
                         setPhotoPreview(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
                       className="px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl font-medium"
                     >
@@ -465,6 +480,12 @@ export default function CandidateApplyPage() {
                 </div>
 
                 <div className="text-xs text-slate-500 leading-relaxed">
+                  {fieldErrors['photograph'] && (
+                    <p className="text-xs font-bold text-red-600 mb-1 flex items-center gap-1 justify-center sm:justify-start">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors['photograph']}</span>
+                    </p>
+                  )}
                   <p>• Accepted formats: <strong>JPG, JPEG, PNG</strong> (Max file size: 5 MB).</p>
                   <p>• You may capture directly from your mobile camera or pick from gallery.</p>
                 </div>
@@ -1444,6 +1465,69 @@ export default function CandidateApplyPage() {
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
                     />
                   </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ==================================================== */}
+          {/* SECTION: PREFERRED JOB ROLE (DROPDOWN + CONDITIONAL "OTHER") */}
+          {/* ==================================================== */}
+          <section className="bg-white rounded-2xl shadow-sm border-2 border-emerald-600 overflow-hidden">
+            <div className="bg-emerald-50 px-6 py-3.5 border-b border-emerald-100 flex items-center gap-2.5">
+              <Star className="w-5 h-5 text-[#006B3C]" />
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
+                PREFERRED JOB ROLE <span className="text-red-500">*</span>
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  What role do you prefer? <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.preferredJobRole}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      preferredJobRole: e.target.value as any,
+                      preferredJobRoleOther: e.target.value === 'OTHER' ? prev.preferredJobRoleOther : '',
+                    }))
+                  }
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                >
+                  <option value="">-- Select Preferred Job Role --</option>
+                  {PREFERRED_JOB_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Conditional manual role input when "OTHER" is selected */}
+              {formData.preferredJobRole === 'OTHER' && (
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 animate-fadeIn">
+                  <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-1.5">
+                    Please specify your preferred job role <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Customer Relationship Executive / Branch Manager"
+                    value={formData.preferredJobRoleOther}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        preferredJobRoleOther: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                  />
+                  <p className="text-[11px] text-amber-800 mt-1.5">
+                    Manually enter the exact title or department you are applying for.
+                  </p>
                 </div>
               )}
             </div>

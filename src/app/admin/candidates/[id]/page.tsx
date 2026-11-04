@@ -450,7 +450,27 @@ export default function CandidateDetailPage() {
             </div>
           </div>
 
-          {/* Section 5: Other Details & Reference */}
+          {/* Section 5: Preferred Job Role */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
+              <Star className="w-4 h-4 text-[#006B3C]" />
+              <span>Preferred Job Role</span>
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <dt className="text-slate-400">Selected Role</dt>
+                <dd className="font-bold text-slate-900 text-sm">{roleDisplay}</dd>
+              </div>
+              {candidate.preferredJobRole === 'OTHER' && candidate.preferredJobRoleOther && (
+                <div>
+                  <dt className="text-slate-400">Specified Custom Role</dt>
+                  <dd className="font-semibold text-amber-800 text-sm">{candidate.preferredJobRoleOther}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          {/* Section 6: Other Details & Reference */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
               <FileText className="w-4 h-4 text-[#006B3C]" />
@@ -478,7 +498,7 @@ export default function CandidateDetailPage() {
             </dl>
           </div>
 
-          {/* Section 6: Address Information */}
+          {/* Section 7: Address Information */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 mb-3">
               <Home className="w-4 h-4 text-[#006B3C]" />
