@@ -26,7 +26,7 @@ export const candidateApplicationSchema = z
       fullName: z.string().min(2, 'Candidate Name is required (min 2 characters)').trim(),
       dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid Date of Birth is required'),
       age: z.coerce.number().min(18, 'Minimum age is 18 years').max(70, 'Age must be 70 or below'),
-      gender: z.enum(['Male', 'Female', 'Other'], { required_error: 'Please select gender' }),
+      gender: z.enum(['Male', 'Female'], { required_error: 'Please select gender' }),
       bloodGroup: z.string().optional().or(z.literal('')),
       maritalStatus: z.enum(['Single', 'Married', 'Divorced', 'Widowed'], { required_error: 'Please select marital status' }),
       fathersName: z.string().min(2, "Father's Name is required").trim(),
@@ -66,12 +66,26 @@ export const candidateApplicationSchema = z
       previousCompany: z.string().optional().or(z.literal('')),
       previousDesignation: z.string().optional().or(z.literal('')),
       yearsOfExperience: z.coerce.number().min(0).optional().default(0),
+      previousCompany2: z.string().optional().or(z.literal('')),
+      previousDesignation2: z.string().optional().or(z.literal('')),
+      yearsOfExperience2: z.coerce.number().min(0).optional().default(0),
+      previousCompany3: z.string().optional().or(z.literal('')),
+      previousDesignation3: z.string().optional().or(z.literal('')),
+      yearsOfExperience3: z.coerce.number().min(0).optional().default(0),
       previousOccupation: z.string().optional().or(z.literal('')),
       previousCompanyName: z.string().optional().or(z.literal('')),
       experienceDurationYears: z.coerce.number().min(0).optional().default(0),
       experienceDurationMonths: z.coerce.number().min(0).max(11).optional().default(0),
       lastDrawnSalary: z.string().optional().or(z.literal('')),
       reasonForLeaving: z.string().optional().or(z.literal('')),
+      previouslyWorkedHere: z.boolean().default(false),
+      previousEmployeeId: z.string().optional().or(z.literal('')),
+      previousBranch: z.string().optional().or(z.literal('')),
+      relievingYear: z.string().optional().or(z.literal('')),
+      joinDesignation: z.string().optional().or(z.literal('')),
+      relievingDesignation: z.string().optional().or(z.literal('')),
+      dateOfRelieving: z.string().optional().or(z.literal('')),
+      reasonForRelieving: z.string().optional().or(z.literal('')),
     }).default({ hasPreviousExperience: false }),
     preferredJobRole: z.enum(
       ['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE', 'OTHER'],
@@ -97,6 +111,30 @@ export const candidateApplicationSchema = z
           code: z.ZodIssueCode.custom,
           message: 'Please specify your preferred job role',
           path: ['preferredJobRoleOther'],
+        });
+      }
+    }
+
+    if (data.employmentDetails?.previouslyWorkedHere) {
+      if (!data.employmentDetails.joinDesignation || !data.employmentDetails.joinDesignation.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Joining Designation at Rupeeapex is required',
+          path: ['employmentDetails', 'joinDesignation'],
+        });
+      }
+      if (!data.employmentDetails.relievingDesignation || !data.employmentDetails.relievingDesignation.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Relieving Designation at Rupeeapex is required',
+          path: ['employmentDetails', 'relievingDesignation'],
+        });
+      }
+      if (!data.employmentDetails.reasonForRelieving || !data.employmentDetails.reasonForRelieving.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Reason for Relieving from Rupeeapex is required',
+          path: ['employmentDetails', 'reasonForRelieving'],
         });
       }
     }

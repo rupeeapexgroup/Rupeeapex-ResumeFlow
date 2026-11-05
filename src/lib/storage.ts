@@ -1,11 +1,38 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary if credentials exist
+const isCloudinaryConfigured = (): boolean => {
+  return Boolean(
+    process.env.CLOUDINARY_URL ||
+    (process.env.CLOUDINARY_CLOUD_NAME &&
+     process.env.CLOUDINARY_API_KEY &&
+     process.env.CLOUDINARY_API_SECRET)
+  );
+};
+
+if (process.env.CLOUDINARY_URL) {
+  cloudinary.config({
+    cloudinary_url: process.env.CLOUDINARY_URL,
+    secure: true,
+  });
+} else if (
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+}
 
 const UPLOAD_DIR = process.env.STORAGE_DIR || path.join(process.cwd(), 'storage', 'uploads');
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
 /**
  * Validates file buffer magic bytes to ensure real image integrity
@@ -34,8 +61,8 @@ export function validateImageMagicBytes(buffer: Buffer): { isValid: boolean; mim
 }
 
 /**
- * Stores a candidate photograph in private local storage
- * Returns unique storage key
+ * Stores a candidate photograph in Cloudinary (or private local storage as fallback)
+ * Returns unique storage key / secure URL
  */
 export async function saveCandidatePhotograph(
   fileBuffer: Buffer,
@@ -50,7 +77,36 @@ export async function saveCandidatePhotograph(
     throw new Error('Invalid file content. Only real JPEG and PNG images are permitted.');
   }
 
-  // Ensure target upload directory exists
+  // 1. If Cloudinary is configured, upload directly to Cloudinary
+  if (isCloudinaryConfigured()) {
+    try {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'resumeflow/candidate_photos',
+            resource_type: 'image',
+            format: mimeType === 'image/png' ? 'png' : 'jpg',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        uploadStream.end(fileBuffer);
+      });
+
+      return {
+        storageKey: uploadResult.secure_url || uploadResult.url,
+        mimeType,
+        size: fileBuffer.length,
+      };
+    } catch (uploadError) {
+      console.error('Cloudinary upload error, falling back to local disk storage:', uploadError);
+      // Fallback to local storage if Cloudinary upload fails
+    }
+  }
+
+  // 2. Fallback / default: local disk storage
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
   const ext = mimeType === 'image/png' ? '.png' : '.jpg';
@@ -68,10 +124,27 @@ export async function saveCandidatePhotograph(
 }
 
 /**
- * Retrieves a candidate photograph file buffer from private storage
+ * Retrieves a candidate photograph file buffer from Cloudinary or local private storage
  */
 export async function getCandidatePhotograph(storageKey: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
-  // Prevent path traversal attacks
+  if (!storageKey) return null;
+
+  // 1. If storageKey is a remote Cloudinary URL
+  if (storageKey.startsWith('http://') || storageKey.startsWith('https://')) {
+    try {
+      const response = await fetch(storageKey);
+      if (!response.ok) return null;
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const { mimeType } = validateImageMagicBytes(buffer);
+      return { buffer, mimeType: mimeType || 'image/jpeg' };
+    } catch (err) {
+      console.error('Failed to fetch image from Cloudinary URL:', err);
+      return null;
+    }
+  }
+
+  // 2. If storageKey is a local filename in UPLOAD_DIR
   const safeFilename = path.basename(storageKey);
   const fullPath = path.join(UPLOAD_DIR, safeFilename);
 
@@ -83,4 +156,3 @@ export async function getCandidatePhotograph(storageKey: string): Promise<{ buff
     return null;
   }
 }
-

@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status') || undefined;
   const education = searchParams.get('education') || undefined;
   const experience = searchParams.get('experience') || undefined;
+  const applicantType = searchParams.get('applicantType') || undefined;
+  const ageRange = searchParams.get('ageRange') || undefined;
+  const gender = searchParams.get('gender') || undefined;
   const dateRange = searchParams.get('dateRange') || undefined;
   const startDate = searchParams.get('startDate') || undefined;
   const endDate = searchParams.get('endDate') || undefined;
@@ -29,6 +32,9 @@ export async function GET(req: NextRequest) {
       status,
       education,
       experience,
+      applicantType,
+      ageRange,
+      gender,
       dateRange,
       startDate,
       endDate,

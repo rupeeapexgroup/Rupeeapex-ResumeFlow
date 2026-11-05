@@ -15,6 +15,7 @@ import {
   Home,
   GraduationCap,
   Briefcase,
+  Building2,
   Star,
   Camera,
   CheckSquare,
@@ -35,7 +36,7 @@ export default function CandidateApplyPage() {
       fullName: '',
       dateOfBirth: '',
       age: 21,
-      gender: 'Male' as 'Male' | 'Female' | 'Other',
+      gender: 'Male' as 'Male' | 'Female',
       maritalStatus: 'Single' as 'Single' | 'Married' | 'Divorced' | 'Widowed',
       fathersName: '',
       mothersName: '',
@@ -74,7 +75,7 @@ export default function CandidateApplyPage() {
     },
     educationDetails: {
       highestQualification: '',
-      educationDetails: '',
+      educationDetails: '', 
       institutionName: '',
       passingYear: '',
     },
@@ -83,6 +84,18 @@ export default function CandidateApplyPage() {
       previousCompany: '',
       previousDesignation: '',
       yearsOfExperience: 0,
+      previousCompany2: '',
+      previousDesignation2: '',
+      yearsOfExperience2: 0,
+      previousCompany3: '',
+      previousDesignation3: '',
+      yearsOfExperience3: 0,
+      previouslyWorkedHere: false,
+      previousEmployeeId: '',
+      joinDesignation: '',
+      relievingDesignation: '',
+      dateOfRelieving: '',
+      reasonForRelieving: '',
     },
     preferredJobRole: '' as any,
     preferredJobRoleOther: '',
@@ -251,6 +264,32 @@ export default function CandidateApplyPage() {
     }
     if (!formData.educationDetails.passingYear || !/^(19|20)\d{2}$/.test(formData.educationDetails.passingYear)) {
       newErrors['passingYear'] = 'Enter a valid 4-digit Passing Year.';
+    }
+
+    // Validate Rupeeapex Previous Employment
+    if (formData.employmentDetails.previouslyWorkedHere) {
+      if (!formData.employmentDetails.joinDesignation?.trim()) {
+        newErrors['joinDesignation'] = 'Joining Designation at Rupeeapex is required.';
+      }
+      if (!formData.employmentDetails.relievingDesignation?.trim()) {
+        newErrors['relievingDesignation'] = 'Relieving Designation at Rupeeapex is required.';
+      }
+      if (!formData.employmentDetails.reasonForRelieving?.trim()) {
+        newErrors['reasonForRelieving'] = 'Reason for Relieving from Rupeeapex is required.';
+      }
+    }
+
+    // Validate Other Work Experience Details
+    if (formData.employmentDetails.hasPreviousExperience) {
+      if (!formData.employmentDetails.previousCompany?.trim()) {
+        newErrors['previousCompany'] = 'Previous Company (Experience 1) is required.';
+      }
+      if (!formData.employmentDetails.previousDesignation?.trim()) {
+        newErrors['previousDesignation'] = 'Previous Designation (Experience 1) is required.';
+      }
+      if (!formData.employmentDetails.yearsOfExperience || formData.employmentDetails.yearsOfExperience <= 0) {
+        newErrors['yearsOfExperience'] = 'Years of Experience (Experience 1) is required.';
+      }
     }
 
     // Validate Preferred Job Role
@@ -577,7 +616,6 @@ export default function CandidateApplyPage() {
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
 
@@ -1351,8 +1389,204 @@ export default function CandidateApplyPage() {
               <Briefcase className="w-5 h-5 text-[#006B3C]" />
               <h2 className="text-sm sm:text-base font-bold text-slate-900">EXPERIENCE DETAILS</h2>
             </div>
-            <div className="p-6 space-y-5">
-              <div className="flex items-center gap-6">
+            <div className="p-6 space-y-6">
+              {/* Question 1: Rupeeapex Ex-Employee Question (Ahead of general work experience) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Have you previously worked at Rupeeapex Groups of Companies?
+                </span>
+                <div className="flex items-center gap-4 text-sm font-medium shrink-0">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="previouslyWorkedHere"
+                      checked={formData.employmentDetails.previouslyWorkedHere === false}
+                      onChange={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          employmentDetails: {
+                            ...prev.employmentDetails,
+                            previouslyWorkedHere: false,
+                            previousEmployeeId: '',
+                            joinDesignation: '',
+                            relievingDesignation: '',
+                            dateOfRelieving: '',
+                            reasonForRelieving: '',
+                          },
+                        }))
+                      }
+                      className="text-[#006B3C] focus:ring-[#006B3C]"
+                    />
+                    <span>No</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="previouslyWorkedHere"
+                      checked={formData.employmentDetails.previouslyWorkedHere === true}
+                      onChange={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          employmentDetails: {
+                            ...prev.employmentDetails,
+                            previouslyWorkedHere: true,
+                          },
+                        }))
+                      }
+                      className="text-[#006B3C] focus:ring-[#006B3C]"
+                    />
+                    <span>Yes</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Rupeeapex Ex-Employee Details (Appears when Yes is selected) */}
+              {formData.employmentDetails.previouslyWorkedHere && (
+                <div className="p-5 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-4 animate-fadeIn">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 uppercase tracking-wider pb-2 border-b border-emerald-100">
+                    <Building2 className="w-4 h-4 text-[#006B3C]" />
+                    <span>Rupeeapex Previous Employment Details</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Employee ID (Optional) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Employee ID <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. RAP-1042"
+                        value={formData.employmentDetails.previousEmployeeId}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employmentDetails: {
+                              ...prev.employmentDetails,
+                              previousEmployeeId: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Joining Designation (Mandatory) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Joining Designation <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Trainee / Field Executive"
+                        value={formData.employmentDetails.joinDesignation}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employmentDetails: {
+                              ...prev.employmentDetails,
+                              joinDesignation: e.target.value,
+                            },
+                          }))
+                        }
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
+                          fieldErrors['joinDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                        }`}
+                      />
+                      {fieldErrors['joinDesignation'] && (
+                        <p className="mt-1 text-xs text-red-600 font-medium">
+                          {fieldErrors['joinDesignation']}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Relieving Designation (Mandatory) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Relieving Designation <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Senior Branch Executive"
+                        value={formData.employmentDetails.relievingDesignation}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employmentDetails: {
+                              ...prev.employmentDetails,
+                              relievingDesignation: e.target.value,
+                            },
+                          }))
+                        }
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
+                          fieldErrors['relievingDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                        }`}
+                      />
+                      {fieldErrors['relievingDesignation'] && (
+                        <p className="mt-1 text-xs text-red-600 font-medium">
+                          {fieldErrors['relievingDesignation']}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Date of Relieving (Optional) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Date of Relieving <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.employmentDetails.dateOfRelieving}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employmentDetails: {
+                              ...prev.employmentDetails,
+                              dateOfRelieving: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Reason for Relieving (Mandatory) */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Reason for Relieving <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Relocated to hometown / Career progression"
+                        value={formData.employmentDetails.reasonForRelieving}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employmentDetails: {
+                              ...prev.employmentDetails,
+                              reasonForRelieving: e.target.value,
+                            },
+                          }))
+                        }
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
+                          fieldErrors['reasonForRelieving'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                        }`}
+                      />
+                      {fieldErrors['reasonForRelieving'] && (
+                        <p className="mt-1 text-xs text-red-600 font-medium">
+                          {fieldErrors['reasonForRelieving']}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Question 2: General Previous Work Experience */}
+              <div className="pt-4 border-t border-slate-200 flex items-center gap-6">
                 <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Do you have previous work experience?
                 </span>
@@ -1397,76 +1631,238 @@ export default function CandidateApplyPage() {
               </div>
 
               {formData.employmentDetails.hasPreviousExperience && (
-                <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Previous Company
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Company name"
-                      value={formData.employmentDetails.previousCompany}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          employmentDetails: {
-                            ...prev.employmentDetails,
-                            previousCompany: e.target.value,
-                            previousCompanyName: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                    />
+                <div className="pt-4 border-t border-slate-100 space-y-4">
+                  {/* Experience Row 1 */}
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-2">
+                      Experience 1 (Latest / Most Recent)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Company <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Company name"
+                          value={formData.employmentDetails.previousCompany}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousCompany: e.target.value,
+                              },
+                            }))
+                          }
+                          className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
+                            fieldErrors['previousCompany'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                          }`}
+                        />
+                        {fieldErrors['previousCompany'] && (
+                          <p className="mt-1 text-xs text-red-600 font-medium">
+                            {fieldErrors['previousCompany']}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Designation <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Sales Executive / Clerk"
+                          value={formData.employmentDetails.previousDesignation}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousDesignation: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Years of Experience <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          step="0.5"
+                          placeholder="Years (e.g. 2)"
+                          value={formData.employmentDetails.yearsOfExperience || ''}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                yearsOfExperience: Number(e.target.value),
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Previous Designation
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Sales Executive / Clerk"
-                      value={formData.employmentDetails.previousDesignation}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          employmentDetails: {
-                            ...prev.employmentDetails,
-                            previousDesignation: e.target.value,
-                            previousOccupation: e.target.value,
-                          },
-                        }))
-                      }
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                    />
+                  {/* Experience Row 2 */}
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-2">
+                      Experience 2 (Previous - Optional)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Company
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Company name"
+                          value={formData.employmentDetails.previousCompany2}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousCompany2: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Designation
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Field Officer"
+                          value={formData.employmentDetails.previousDesignation2}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousDesignation2: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Years of Experience
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          placeholder="Years (e.g. 1.5)"
+                          value={formData.employmentDetails.yearsOfExperience2 || ''}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                yearsOfExperience2: Number(e.target.value),
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Years of Experience
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="Years (e.g. 2)"
-                      value={formData.employmentDetails.yearsOfExperience}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          employmentDetails: {
-                            ...prev.employmentDetails,
-                            yearsOfExperience: Number(e.target.value),
-                            experienceDurationYears: Math.floor(Number(e.target.value)),
-                          },
-                        }))
-                      }
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                    />
+                  {/* Experience Row 3 */}
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block mb-2">
+                      Experience 3 (Previous - Optional)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Company
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Company name"
+                          value={formData.employmentDetails.previousCompany3}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousCompany3: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Previous Designation
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Trainee / Assistant"
+                          value={formData.employmentDetails.previousDesignation3}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                previousDesignation3: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                          Years of Experience
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          placeholder="Years (e.g. 1)"
+                          value={formData.employmentDetails.yearsOfExperience3 || ''}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              employmentDetails: {
+                                ...prev.employmentDetails,
+                                yearsOfExperience3: Number(e.target.value),
+                              },
+                            }))
+                          }
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
+
             </div>
           </section>
 

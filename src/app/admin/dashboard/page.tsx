@@ -128,6 +128,55 @@ export default async function AdminDashboardPage() {
                 <div className="text-[11px] text-slate-500 mt-1">Hired candidates</div>
               </div>
             </div>
+
+            {/* Gender-wise Distribution Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <Link
+                href="/admin/candidates?gender=Male"
+                className="p-5 rounded-2xl border border-sky-200 bg-white hover:border-sky-400 hover:shadow-md transition-all shadow-sm flex items-center justify-between group"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 group-hover:text-sky-700">
+                      Male Applicants
+                    </span>
+                  </div>
+                  <div className="text-3xl font-black text-slate-900">
+                    {stats.genderCounts.male}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {stats.total > 0 ? Math.round((stats.genderCounts.male / stats.total) * 100) : 0}% of total candidates
+                  </div>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center font-bold text-xl group-hover:bg-sky-100 transition-colors">
+                  ♂
+                </div>
+              </Link>
+
+              <Link
+                href="/admin/candidates?gender=Female"
+                className="p-5 rounded-2xl border border-rose-200 bg-white hover:border-rose-400 hover:shadow-md transition-all shadow-sm flex items-center justify-between group"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 group-hover:text-rose-700">
+                      Female Applicants
+                    </span>
+                  </div>
+                  <div className="text-3xl font-black text-slate-900">
+                    {stats.genderCounts.female}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1 font-medium">
+                    {stats.total > 0 ? Math.round((stats.genderCounts.female / stats.total) * 100) : 0}% of total candidates
+                  </div>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center font-bold text-xl group-hover:bg-rose-100 transition-colors">
+                  ♀
+                </div>
+              </Link>
+            </div>
           </section>
 
           {/* 2. Applications by Preferred Job Role */}

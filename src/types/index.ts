@@ -6,7 +6,7 @@ export interface PersonalDetails {
   fullName: string;
   dateOfBirth: string; // YYYY-MM-DD
   age: number;
-  gender: 'Male' | 'Female' | 'Other';
+  gender: 'Male' | 'Female';
   bloodGroup?: string;
   maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed';
   fathersName: string;
@@ -60,11 +60,25 @@ export interface EmploymentDetails {
   previousCompanyName?: string;
   previousDesignation?: string;
   yearsOfExperience?: number;
+  previousCompany2?: string;
+  previousDesignation2?: string;
+  yearsOfExperience2?: number;
+  previousCompany3?: string;
+  previousDesignation3?: string;
+  yearsOfExperience3?: number;
   experienceDurationYears?: number;
   experienceDurationMonths?: number;
   lastDrawnSalary?: string;
   reasonForLeaving?: string;
   previousOccupation?: string;
+  previouslyWorkedHere?: boolean;
+  previousEmployeeId?: string;
+  previousBranch?: string;
+  relievingYear?: string;
+  joinDesignation?: string;
+  relievingDesignation?: string;
+  dateOfRelieving?: string;
+  reasonForRelieving?: string;
 }
 
 export interface ReferenceDetails {
@@ -91,6 +105,10 @@ export interface CandidateRecord {
   photographMimeType?: string;
   applicationStatus: ApplicationStatus;
   statusNotes?: string;
+  isExEmployee?: boolean;
+  isRepeatApplicant?: boolean;
+  previousApplicationId?: string;
+  previousApplicationsCount?: number;
   submittedAt: Date | string;
   updatedAt: Date | string;
 }
@@ -111,4 +129,8 @@ export interface DashboardStats {
   rejected: number;
   selected: number;
   roleCounts: Record<PreferredJobRole, number>;
+  genderCounts: {
+    male: number;
+    female: number;
+  };
 }

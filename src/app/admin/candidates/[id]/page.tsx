@@ -14,6 +14,8 @@ import {
   Home,
   GraduationCap,
   Briefcase,
+  Building2,
+  History,
   Users,
   User,
   Star,
@@ -424,6 +426,44 @@ export default function CandidateDetailPage() {
                     {candidate.employmentDetails.hasPreviousExperience ? 'Experienced' : 'Fresher'}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-slate-400">Worked at Rupeeapex Before?</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {candidate.isExEmployee || candidate.employmentDetails?.previouslyWorkedHere ? (
+                      <span className="text-emerald-700 font-bold">Yes (Ex-Employee)</span>
+                    ) : (
+                      'No'
+                    )}
+                  </dd>
+                </div>
+                {candidate.employmentDetails?.previouslyWorkedHere && (
+                  <>
+                    {candidate.employmentDetails.previousEmployeeId && (
+                      <div>
+                        <dt className="text-slate-400">Rupeeapex Employee ID</dt>
+                        <dd className="font-semibold text-slate-900">{candidate.employmentDetails.previousEmployeeId}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-slate-400">Rupeeapex Joining Designation</dt>
+                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.joinDesignation || 'N/A'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-400">Rupeeapex Relieving Designation</dt>
+                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.relievingDesignation || 'N/A'}</dd>
+                    </div>
+                    {candidate.employmentDetails.dateOfRelieving && (
+                      <div>
+                        <dt className="text-slate-400">Date of Relieving</dt>
+                        <dd className="font-semibold text-slate-900">{candidate.employmentDetails.dateOfRelieving}</dd>
+                      </div>
+                    )}
+                    <div className="col-span-2">
+                      <dt className="text-slate-400">Reason for Relieving</dt>
+                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.reasonForRelieving || 'N/A'}</dd>
+                    </div>
+                  </>
+                )}
                 {candidate.employmentDetails.hasPreviousExperience && (
                   <>
                     <div>

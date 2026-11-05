@@ -29,6 +29,9 @@ export default function AdminCandidatesPage() {
   const [selectedRole, setSelectedRole] = useState('ALL');
   const [selectedEducation, setSelectedEducation] = useState('ALL');
   const [selectedExperience, setSelectedExperience] = useState('ALL');
+  const [applicantType, setApplicantType] = useState('ALL');
+  const [selectedAge, setSelectedAge] = useState('ALL');
+  const [selectedGender, setSelectedGender] = useState('ALL');
   const [dateRange, setDateRange] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -44,6 +47,9 @@ export default function AdminCandidatesPage() {
       if (selectedRole !== 'ALL') params.set('role', selectedRole);
       if (selectedEducation !== 'ALL') params.set('education', selectedEducation);
       if (selectedExperience !== 'ALL') params.set('experience', selectedExperience);
+      if (applicantType !== 'ALL') params.set('applicantType', applicantType);
+      if (selectedAge !== 'ALL') params.set('ageRange', selectedAge);
+      if (selectedGender !== 'ALL') params.set('gender', selectedGender);
 
       if (dateRange !== 'ALL') {
         if (dateRange === 'custom') {
@@ -71,7 +77,17 @@ export default function AdminCandidatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedRole, selectedEducation, selectedExperience, dateRange, startDate, endDate]);
+  }, [search, selectedRole, selectedEducation, selectedExperience, applicantType, selectedAge, selectedGender, dateRange, startDate, endDate]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const roleParam = urlParams.get('role');
+      const genderParam = urlParams.get('gender');
+      if (roleParam) setSelectedRole(roleParam);
+      if (genderParam) setSelectedGender(genderParam);
+    }
+  }, []);
 
   useEffect(() => {
     fetchCandidates(1);
@@ -87,6 +103,9 @@ export default function AdminCandidatesPage() {
     setSelectedRole('ALL');
     setSelectedEducation('ALL');
     setSelectedExperience('ALL');
+    setApplicantType('ALL');
+    setSelectedAge('ALL');
+    setSelectedGender('ALL');
     setDateRange('ALL');
     setStartDate('');
     setEndDate('');
@@ -137,7 +156,7 @@ export default function AdminCandidatesPage() {
             </form>
 
             {/* Filter Controls Row */}
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {/* Role filter */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -189,6 +208,58 @@ export default function AdminCandidatesPage() {
                   <option value="ALL">All Candidates</option>
                   <option value="experienced">Experienced Only</option>
                   <option value="fresher">Fresher Only</option>
+                </select>
+              </div>
+
+              {/* Applicant Type filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Applicant Type
+                </label>
+                <select
+                  value={applicantType}
+                  onChange={(e) => setApplicantType(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                >
+                  <option value="ALL">All Applicants</option>
+                  <option value="NEW">New Applicants Only</option>
+                  <option value="EX_EMPLOYEE">Ex-Employees / Re-Hires</option>
+                  <option value="REPEAT">Repeat Applicants</option>
+                </select>
+              </div>
+
+              {/* Age Range Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Age Group
+                </label>
+                <select
+                  value={selectedAge}
+                  onChange={(e) => setSelectedAge(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                >
+                  <option value="ALL">All Ages (Any)</option>
+                  <option value="under-21">Under 21 Yrs</option>
+                  <option value="21-25">21 - 25 Yrs</option>
+                  <option value="26-30">26 - 30 Yrs</option>
+                  <option value="31-35">31 - 35 Yrs</option>
+                  <option value="36+">36+ Yrs</option>
+                </select>
+              </div>
+
+              {/* Gender Filter */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Gender
+                </label>
+                <select
+                  value={selectedGender}
+                  onChange={(e) => setSelectedGender(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                >
+                  <option value="ALL">All Genders</option>
+                  <option value="Male">Male Candidates</option>
+                  <option value="Female">Female Candidates</option>
                 </select>
               </div>
 

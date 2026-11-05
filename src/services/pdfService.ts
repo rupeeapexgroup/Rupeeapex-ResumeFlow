@@ -361,6 +361,53 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
       currentY,
       { label1Width: 92, label2Width: 80 }
     );
+
+    if (candidate.employmentDetails.previousCompany2) {
+      currentY = drawAlignedRow(
+        'Company 2',
+        candidate.employmentDetails.previousCompany2,
+        'Designation / Exp',
+        `${candidate.employmentDetails.previousDesignation2 || 'N/A'} (${candidate.employmentDetails.yearsOfExperience2 || 0} Yrs)`,
+        currentY,
+        { label1Width: 92, label2Width: 80 }
+      );
+    }
+
+    if (candidate.employmentDetails.previousCompany3) {
+      currentY = drawAlignedRow(
+        'Company 3',
+        candidate.employmentDetails.previousCompany3,
+        'Designation / Exp',
+        `${candidate.employmentDetails.previousDesignation3 || 'N/A'} (${candidate.employmentDetails.yearsOfExperience3 || 0} Yrs)`,
+        currentY,
+        { label1Width: 92, label2Width: 80 }
+      );
+    }
+  }
+
+  const exEmpText = (candidate.isExEmployee || candidate.employmentDetails?.previouslyWorkedHere)
+    ? 'Yes (Ex-Rupeeapex Employee)'
+    : (candidate.isRepeatApplicant ? 'No (Repeat Applicant)' : 'No');
+
+  currentY = drawAlignedRow(
+    'Worked Here Before?',
+    exEmpText,
+    candidate.employmentDetails?.previousEmployeeId ? 'Past Emp ID' : '',
+    candidate.employmentDetails?.previousEmployeeId || '',
+    currentY,
+    { label1Width: 92, label2Width: 80 }
+  );
+
+  if (candidate.employmentDetails?.previouslyWorkedHere && candidate.employmentDetails?.joinDesignation) {
+    const rolesLine = `Join: ${candidate.employmentDetails.joinDesignation || 'N/A'} | Relieve: ${candidate.employmentDetails.relievingDesignation || 'N/A'}`;
+    currentY = drawAlignedRow(
+      'Rupeeapex Roles',
+      rolesLine,
+      'Relieving Reason',
+      candidate.employmentDetails.reasonForRelieving || 'N/A',
+      currentY,
+      { label1Width: 92, label2Width: 80 }
+    );
   }
   currentY -= 4;
 

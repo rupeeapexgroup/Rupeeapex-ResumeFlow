@@ -11,6 +11,9 @@ export interface CandidateFilterParams {
   status?: string;
   education?: string;
   experience?: string; // 'ALL' | 'experienced' | 'fresher'
+  applicantType?: string; // 'ALL' | 'NEW' | 'EX_EMPLOYEE' | 'REPEAT'
+  ageRange?: string; // 'ALL' | 'under-21' | '21-25' | '26-30' | '31-35' | '36+'
+  gender?: string; // 'ALL' | 'Male' | 'Female'
   dateRange?: string; // 'today' | '7days' | '30days' | 'custom'
   startDate?: string;
   endDate?: string;
@@ -38,7 +41,30 @@ export async function submitApplication(
     ? { ...data.addressDetails.permanentAddress }
     : data.addressDetails.temporaryAddress;
 
-  // 4. Save Candidate record in MongoDB
+  // 4. Automated background check for previous applications by PAN or Aadhaar
+  const pan = (data.personalDetails.panNumber || '').toUpperCase().trim();
+  const aadhaar = (data.personalDetails.aadhaarNumber || '').trim();
+
+  const previousApplications = await Candidate.find({
+    $or: [
+      { 'personalDetails.panNumber': pan },
+      { 'personalDetails.aadhaarNumber': aadhaar },
+    ],
+  }).sort({ submittedAt: -1 }).lean();
+
+  const hadPreviousEmployment = previousApplications.some(
+    (app) => app.applicationStatus === 'SELECTED'
+  );
+
+  const isExEmployee = Boolean(
+    data.employmentDetails?.previouslyWorkedHere || hadPreviousEmployment
+  );
+
+  const isRepeatApplicant = previousApplications.length > 0;
+  const previousApplicationId = previousApplications.length > 0 ? previousApplications[0].applicationId : undefined;
+  const previousApplicationsCount = previousApplications.length;
+
+  // 5. Save Candidate record in MongoDB
   const candidate = await Candidate.create({
     applicationId,
     personalDetails: {
@@ -65,6 +91,10 @@ export async function submitApplication(
     photographFileName: photoOriginalName,
     photographMimeType: mimeType,
     applicationStatus: 'NEW',
+    isExEmployee,
+    isRepeatApplicant,
+    previousApplicationId,
+    previousApplicationsCount,
     submittedAt: new Date(),
   });
 
@@ -109,6 +139,19 @@ export async function getCandidates(params: CandidateFilterParams) {
     query['educationDetails.highestQualification'] = new RegExp(params.education.trim(), 'i');
   }
 
+  // Applicant type filter
+  if (params.applicantType && params.applicantType !== 'ALL') {
+    if (params.applicantType === 'EX_EMPLOYEE') {
+      query.isExEmployee = true;
+    } else if (params.applicantType === 'REPEAT') {
+      query.isRepeatApplicant = true;
+      query.isExEmployee = { $ne: true };
+    } else if (params.applicantType === 'NEW') {
+      query.isRepeatApplicant = { $ne: true };
+      query.isExEmployee = { $ne: true };
+    }
+  }
+
   // Experience filter
   if (params.experience && params.experience !== 'ALL') {
     if (params.experience === 'experienced') {
@@ -116,6 +159,26 @@ export async function getCandidates(params: CandidateFilterParams) {
     } else if (params.experience === 'fresher') {
       query['employmentDetails.hasPreviousExperience'] = false;
     }
+  }
+
+  // Age Range filter
+  if (params.ageRange && params.ageRange !== 'ALL') {
+    if (params.ageRange === 'under-21') {
+      query['personalDetails.age'] = { $lt: 21 };
+    } else if (params.ageRange === '21-25') {
+      query['personalDetails.age'] = { $gte: 21, $lte: 25 };
+    } else if (params.ageRange === '26-30') {
+      query['personalDetails.age'] = { $gte: 26, $lte: 30 };
+    } else if (params.ageRange === '31-35') {
+      query['personalDetails.age'] = { $gte: 31, $lte: 35 };
+    } else if (params.ageRange === '36+') {
+      query['personalDetails.age'] = { $gte: 36 };
+    }
+  }
+
+  // Gender filter
+  if (params.gender && params.gender !== 'ALL') {
+    query['personalDetails.gender'] = params.gender;
   }
 
   // Date filters
@@ -241,7 +304,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const [total, todayCount, statusCounts, roleCountsAgg] = await Promise.all([
+  const [total, todayCount, statusCounts, roleCountsAgg, genderCountsAgg] = await Promise.all([
     Candidate.countDocuments({}),
     Candidate.countDocuments({ submittedAt: { $gte: startOfToday } }),
     Candidate.aggregate([
@@ -256,6 +319,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       {
         $group: {
           _id: '$preferredJobRole',
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Candidate.aggregate([
+      {
+        $group: {
+          _id: '$personalDetails.gender',
           count: { $sum: 1 },
         },
       },
@@ -278,6 +349,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       INSURANCE: 0,
       OTHER: 0,
     },
+    genderCounts: {
+      male: 0,
+      female: 0,
+    },
   };
 
   statusCounts.forEach((s) => {
@@ -292,6 +367,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     if (['GOLD', 'NIDHI', 'MFI', 'CHIT', 'INSURANCE', 'OTHER'].includes(r._id)) {
       stats.roleCounts[r._id as PreferredJobRole] = r.count;
     }
+  });
+
+  genderCountsAgg.forEach((g) => {
+    if (g._id === 'Male') stats.genderCounts.male = g.count;
+    else if (g._id === 'Female') stats.genderCounts.female = g.count;
   });
 
   return stats;
