@@ -260,10 +260,10 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   currentY = drawAlignedRow(
     'PAN Number',
     candidate.personalDetails.panNumber || 'N/A',
-    'Spouse Name',
-    candidate.personalDetails.spouseName || 'N/A',
+    'Driving License',
+    candidate.personalDetails.drivingLicenseNumber || 'N/A',
     currentY,
-    { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
+    { customWidth: personalWidth, label1Width: 70, label2Width: 68 }
   );
 
   // Resume full width cleanly below the Photo Box and Personal Details

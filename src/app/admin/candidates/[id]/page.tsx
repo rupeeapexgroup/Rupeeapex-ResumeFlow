@@ -330,7 +330,11 @@ export default function CandidateDetailPage() {
                 </div>
                 <div>
                   <dt className="text-slate-400">PAN Number</dt>
-                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.panNumber}</dd>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.panNumber || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-400">Driving License No</dt>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.drivingLicenseNumber || 'N/A'}</dd>
                 </div>
               </dl>
             </div>

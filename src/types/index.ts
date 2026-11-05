@@ -16,7 +16,8 @@ export interface PersonalDetails {
   alternativeMobileNumber?: string;
   email: string;
   aadhaarNumber: string; // 12-digit Aadhaar number
-  panNumber: string;     // 10-character PAN number
+  panNumber?: string;            // 10-character PAN number (optional)
+  drivingLicenseNumber?: string; // Driving License Number (optional)
 }
 
 export interface FamilyDetails {

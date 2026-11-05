@@ -46,6 +46,7 @@ export default function CandidateApplyPage() {
       email: '',
       aadhaarNumber: '',
       panNumber: '',
+      drivingLicenseNumber: '',
     },
     familyDetails: {
       fathersOccupation: '',
@@ -234,7 +235,7 @@ export default function CandidateApplyPage() {
     if (!formData.personalDetails.aadhaarNumber || !/^\d{12}$/.test(formData.personalDetails.aadhaarNumber)) {
       newErrors['aadhaarNumber'] = 'Enter a valid 12-digit Aadhaar Number.';
     }
-    if (!formData.personalDetails.panNumber || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.personalDetails.panNumber)) {
+    if (formData.personalDetails.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.personalDetails.panNumber.trim())) {
       newErrors['panNumber'] = 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F).';
     }
 
@@ -320,7 +321,8 @@ export default function CandidateApplyPage() {
         ...formData,
         personalDetails: {
           ...formData.personalDetails,
-          panNumber: formData.personalDetails.panNumber.toUpperCase(),
+          panNumber: formData.personalDetails.panNumber ? formData.personalDetails.panNumber.trim().toUpperCase() : '',
+          drivingLicenseNumber: formData.personalDetails.drivingLicenseNumber ? formData.personalDetails.drivingLicenseNumber.trim().toUpperCase() : '',
         },
         addressDetails: {
           ...formData.addressDetails,
@@ -804,14 +806,13 @@ export default function CandidateApplyPage() {
                 />
               </div>
 
-              {/* PAN Number */}
+              {/* PAN Number (Optional) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  PAN Number <span className="text-red-500">*</span>
+                  PAN Number <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
                 </label>
                 <input
                   type="text"
-                  required
                   maxLength={10}
                   placeholder="e.g. ABCDE1234F"
                   value={formData.personalDetails.panNumber}
@@ -821,6 +822,28 @@ export default function CandidateApplyPage() {
                       personalDetails: {
                         ...prev.personalDetails,
                         panNumber: e.target.value.toUpperCase(),
+                      },
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                />
+              </div>
+
+              {/* Driving License Number (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Driving License Number <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. TN0120220001234"
+                  value={formData.personalDetails.drivingLicenseNumber}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      personalDetails: {
+                        ...prev.personalDetails,
+                        drivingLicenseNumber: e.target.value.toUpperCase(),
                       },
                     }))
                   }

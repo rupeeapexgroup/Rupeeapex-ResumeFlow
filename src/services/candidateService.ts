@@ -45,11 +45,13 @@ export async function submitApplication(
   const pan = (data.personalDetails.panNumber || '').toUpperCase().trim();
   const aadhaar = (data.personalDetails.aadhaarNumber || '').trim();
 
+  const matchConditions: any[] = [{ 'personalDetails.aadhaarNumber': aadhaar }];
+  if (pan) {
+    matchConditions.push({ 'personalDetails.panNumber': pan });
+  }
+
   const previousApplications = await Candidate.find({
-    $or: [
-      { 'personalDetails.panNumber': pan },
-      { 'personalDetails.aadhaarNumber': aadhaar },
-    ],
+    $or: matchConditions,
   }).sort({ submittedAt: -1 }).lean();
 
   const hadPreviousEmployment = previousApplications.some(
@@ -69,7 +71,8 @@ export async function submitApplication(
     applicationId,
     personalDetails: {
       ...data.personalDetails,
-      panNumber: data.personalDetails.panNumber.toUpperCase(),
+      panNumber: data.personalDetails.panNumber ? data.personalDetails.panNumber.toUpperCase().trim() : '',
+      drivingLicenseNumber: data.personalDetails.drivingLicenseNumber ? data.personalDetails.drivingLicenseNumber.toUpperCase().trim() : '',
     },
     familyDetails: data.familyDetails,
     contactDetails: {
@@ -120,6 +123,7 @@ export async function getCandidates(params: CandidateFilterParams) {
       { 'personalDetails.email': regex },
       { 'personalDetails.aadhaarNumber': regex },
       { 'personalDetails.panNumber': regex },
+      { 'personalDetails.drivingLicenseNumber': regex },
       { 'contactDetails.mobileNumber': regex },
     ];
   }

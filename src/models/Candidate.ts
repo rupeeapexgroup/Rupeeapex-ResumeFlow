@@ -18,7 +18,8 @@ const PersonalDetailsSchema = new Schema(
     alternativeMobileNumber: { type: String, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     aadhaarNumber: { type: String, required: true, trim: true },
-    panNumber: { type: String, required: true, trim: true, uppercase: true },
+    panNumber: { type: String, trim: true, uppercase: true },
+    drivingLicenseNumber: { type: String, trim: true, uppercase: true },
   },
   { _id: false }
 );
@@ -205,6 +206,7 @@ CandidateSchema.index({
   'personalDetails.mobileNumber': 'text',
   'personalDetails.aadhaarNumber': 'text',
   'personalDetails.panNumber': 'text',
+  'personalDetails.drivingLicenseNumber': 'text',
   applicationId: 'text',
 });
 CandidateSchema.index({ preferredJobRole: 1, applicationStatus: 1, submittedAt: -1 });

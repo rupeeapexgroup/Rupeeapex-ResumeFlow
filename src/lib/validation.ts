@@ -36,7 +36,8 @@ export const candidateApplicationSchema = z
       alternativeMobileNumber: z.string().regex(/^[6-9]\d{9}$/, 'Enter valid 10-digit Alternative Mobile').optional().or(z.literal('')),
       email: z.string().email('Enter a valid Email Address').trim().toLowerCase(),
       aadhaarNumber: z.string().regex(/^\d{12}$/, 'Enter a valid 12-digit Aadhaar Number').trim(),
-      panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F)').trim().toUpperCase(),
+      panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F)').trim().toUpperCase().optional().or(z.literal('')),
+      drivingLicenseNumber: z.string().trim().toUpperCase().optional().or(z.literal('')),
     }),
     familyDetails: z.object({
       fathersOccupation: z.string().optional().or(z.literal('')),
