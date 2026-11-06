@@ -2,9 +2,6 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { Admin, IAdmin } from '@/models/Admin';
 import { hashPassword, verifyPassword, createSessionToken } from '@/lib/auth';
 
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutes lockout
-
 export async function loginAdmin(username: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
   await connectToDatabase();
 
@@ -19,34 +16,12 @@ export async function loginAdmin(username: string, password: string): Promise<{ 
     return { success: false, error: 'Account has been deactivated. Please contact administrator.' };
   }
 
-  // Check lockout
-  if (admin.lockUntil && admin.lockUntil.getTime() > Date.now()) {
-    const minutesLeft = Math.ceil((admin.lockUntil.getTime() - Date.now()) / (60 * 1000));
-    return {
-      success: false,
-      error: `Too many failed login attempts. Account temporarily locked. Try again in ${minutesLeft} minutes.`,
-    };
-  }
-
   const isPasswordValid = await verifyPassword(password, admin.passwordHash);
 
   if (!isPasswordValid) {
-    admin.failedLoginAttempts = (admin.failedLoginAttempts || 0) + 1;
-    if (admin.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
-      admin.lockUntil = new Date(Date.now() + LOCK_TIME_MS);
-      await admin.save();
-      return {
-        success: false,
-        error: `Account locked due to 5 consecutive failed attempts. Please try again after 15 minutes.`,
-      };
-    }
-    await admin.save();
     return { success: false, error: 'Invalid username or password' };
   }
 
-  // Reset failed attempts on successful login
-  admin.failedLoginAttempts = 0;
-  admin.lockUntil = undefined;
   admin.lastLoginAt = new Date();
   await admin.save();
 
@@ -98,4 +73,3 @@ export async function seedInitialAdmins(): Promise<{ created: string[]; existing
 
   return { created, existing };
 }
-

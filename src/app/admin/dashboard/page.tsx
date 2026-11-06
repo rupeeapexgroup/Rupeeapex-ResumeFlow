@@ -45,7 +45,7 @@ export default async function AdminDashboardPage() {
           <div>
             <h1 className="text-xl font-bold text-slate-900">HR Recruitment Dashboard</h1>
             <p className="text-xs text-slate-500">
-              Rupeeapex Groups of Companies • Live Candidate Statistics
+              Rupeeapex Group of Companies • Live Candidate Statistics
             </p>
           </div>
           <div className="flex items-center gap-3">

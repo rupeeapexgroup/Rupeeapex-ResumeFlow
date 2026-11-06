@@ -93,7 +93,7 @@ async function generateReceptionAssets() {
       height: 70,
       color: primaryGreen,
     });
-    page.drawText('RUPEEAPEX GROUPS OF COMPANIES', {
+    page.drawText('RUPEEAPEX Group OF COMPANIES', {
       x: 50,
       y: currentY - 45,
       size: 20,
@@ -224,7 +224,7 @@ async function generateReceptionAssets() {
   });
 
   // Centered Footer Content with comfortable padding from border
-  const footerTitle = 'Rupeeapex Groups of Companies - Empowering Growth & Prosperity';
+  const footerTitle = 'Rupeeapex Group of Companies';
   const footerTitleWidth = fontBold.widthOfTextAtSize(footerTitle, 10);
   page.drawText(footerTitle, {
     x: (width - footerTitleWidth) / 2,
@@ -234,7 +234,7 @@ async function generateReceptionAssets() {
     color: primaryGreen,
   });
 
-  const helpText = 'Need help? Please contact the reception desk.';
+  const helpText = 'Contact: hr@rupeeapexGroup.com | +91 8925866326';
   const helpTextWidth = fontRegular.widthOfTextAtSize(helpText, 9);
   page.drawText(helpText, {
     x: (width - helpTextWidth) / 2,

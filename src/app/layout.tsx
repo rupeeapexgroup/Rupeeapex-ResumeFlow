@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ResumeFlow | Rupeeapex Groups of Companies',
-  description: 'HR Job Application Management Portal for Rupeeapex Groups of Companies',
+  title: 'ResumeFlow | Rupeeapex Group of Companies',
+  description: 'HR Job Application Management Portal for Rupeeapex Group of Companies',
   icons: {
     icon: '/logo/rupeeapex-logo.jpeg',
   },
