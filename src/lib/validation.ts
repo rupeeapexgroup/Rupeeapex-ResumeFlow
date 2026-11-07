@@ -38,6 +38,9 @@ export const candidateApplicationSchema = z
       aadhaarNumber: z.string().regex(/^\d{12}$/, 'Enter a valid 12-digit Aadhaar Number').trim(),
       panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F)').trim().toUpperCase().optional().or(z.literal('')),
       drivingLicenseNumber: z.string().trim().toUpperCase().optional().or(z.literal('')),
+      bankAccountNumber: z.string().trim().optional().or(z.literal('')),
+      ifscCode: z.string().trim().toUpperCase().optional().or(z.literal('')),
+      bankBranchName: z.string().trim().optional().or(z.literal('')),
     }),
     familyDetails: z.object({
       fathersOccupation: z.string().optional().or(z.literal('')),
@@ -106,6 +109,16 @@ export const candidateApplicationSchema = z
     }),
   })
   .superRefine((data, ctx) => {
+    if (data.personalDetails?.ifscCode && data.personalDetails.ifscCode.trim()) {
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(data.personalDetails.ifscCode.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Enter a valid 11-character IFSC Code (e.g. SBIN0001234)',
+          path: ['personalDetails', 'ifscCode'],
+        });
+      }
+    }
+
     if (data.preferredJobRole === 'OTHER') {
       if (!data.preferredJobRoleOther || data.preferredJobRoleOther.trim().length < 2) {
         ctx.addIssue({

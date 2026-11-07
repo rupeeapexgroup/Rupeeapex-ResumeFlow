@@ -336,6 +336,22 @@ export default function CandidateDetailPage() {
                   <dt className="text-slate-400">Driving License No</dt>
                   <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.drivingLicenseNumber || 'N/A'}</dd>
                 </div>
+                <div>
+                  <dt className="text-slate-400">Blood Group</dt>
+                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.bloodGroup || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-400">Bank Account No</dt>
+                  <dd className="font-mono font-semibold text-slate-900">{candidate.personalDetails.bankAccountNumber || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-400">IFSC Code</dt>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.ifscCode || 'N/A'}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-slate-400">Bank & Branch Name</dt>
+                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.bankBranchName || 'N/A'}</dd>
+                </div>
               </dl>
             </div>
 

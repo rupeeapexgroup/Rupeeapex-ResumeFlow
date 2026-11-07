@@ -73,6 +73,10 @@ export async function submitApplication(
       ...data.personalDetails,
       panNumber: data.personalDetails.panNumber ? data.personalDetails.panNumber.toUpperCase().trim() : '',
       drivingLicenseNumber: data.personalDetails.drivingLicenseNumber ? data.personalDetails.drivingLicenseNumber.toUpperCase().trim() : '',
+      bloodGroup: data.personalDetails.bloodGroup || '',
+      bankAccountNumber: data.personalDetails.bankAccountNumber ? data.personalDetails.bankAccountNumber.trim() : '',
+      ifscCode: data.personalDetails.ifscCode ? data.personalDetails.ifscCode.toUpperCase().trim() : '',
+      bankBranchName: data.personalDetails.bankBranchName ? data.personalDetails.bankBranchName.trim() : '',
     },
     familyDetails: data.familyDetails,
     contactDetails: {

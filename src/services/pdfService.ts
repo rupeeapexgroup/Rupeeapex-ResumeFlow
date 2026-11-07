@@ -228,8 +228,8 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   currentY = drawAlignedRow(
     'Date of Birth',
     `${candidate.personalDetails.dateOfBirth} (${candidate.personalDetails.age} yrs)`,
-    'Marital Status',
-    candidate.personalDetails.maritalStatus,
+    'Marital / Blood',
+    `${candidate.personalDetails.maritalStatus}${candidate.personalDetails.bloodGroup ? ` (${candidate.personalDetails.bloodGroup})` : ''}`,
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
   );
@@ -268,6 +268,19 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
 
   // Resume full width cleanly below the Photo Box and Personal Details
   currentY = Math.min(currentY, photoY) - 8;
+
+  // Bank Account Details (if provided)
+  if (candidate.personalDetails?.bankAccountNumber || candidate.personalDetails?.ifscCode) {
+    currentY = drawAlignedRow(
+      'Bank Account No',
+      `${candidate.personalDetails.bankAccountNumber || 'N/A'} (IFSC: ${candidate.personalDetails.ifscCode || 'N/A'})`,
+      'Bank & Branch',
+      candidate.personalDetails.bankBranchName || 'N/A',
+      currentY,
+      { label1Width: 88, label2Width: 78 }
+    );
+    currentY -= 4;
+  }
 
   // 5. Section 2: Family Details
   currentY = drawSectionHeader('2. FAMILY DETAILS', currentY);

@@ -18,6 +18,9 @@ export interface PersonalDetails {
   aadhaarNumber: string; // 12-digit Aadhaar number
   panNumber?: string;            // 10-character PAN number (optional)
   drivingLicenseNumber?: string; // Driving License Number (optional)
+  bankAccountNumber?: string;   // Bank Account Number (optional)
+  ifscCode?: string;             // IFSC Code (optional)
+  bankBranchName?: string;       // Bank and Branch Name (optional)
 }
 
 export interface FamilyDetails {

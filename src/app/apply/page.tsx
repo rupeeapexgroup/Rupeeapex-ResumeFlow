@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   PREFERRED_JOB_ROLES,
   EDUCATION_QUALIFICATIONS,
+  BLOOD_Group,
   MARITAL_STATUSES,
   REFERRAL_SOURCES,
 } from '@/lib/constants';
@@ -47,6 +48,10 @@ export default function CandidateApplyPage() {
       aadhaarNumber: '',
       panNumber: '',
       drivingLicenseNumber: '',
+      bloodGroup: '',
+      bankAccountNumber: '',
+      ifscCode: '',
+      bankBranchName: '',
     },
     familyDetails: {
       fathersOccupation: '',
@@ -238,6 +243,9 @@ export default function CandidateApplyPage() {
     if (formData.personalDetails.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.personalDetails.panNumber.trim())) {
       newErrors['panNumber'] = 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F).';
     }
+    if (formData.personalDetails.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(formData.personalDetails.ifscCode.trim())) {
+      newErrors['ifscCode'] = 'Enter a valid 11-character IFSC Code (e.g. SBIN0001234).';
+    }
 
     // Validate Address Details
     if (!formData.addressDetails.permanentAddress.doorNoStreet.trim()) {
@@ -323,6 +331,10 @@ export default function CandidateApplyPage() {
           ...formData.personalDetails,
           panNumber: formData.personalDetails.panNumber ? formData.personalDetails.panNumber.trim().toUpperCase() : '',
           drivingLicenseNumber: formData.personalDetails.drivingLicenseNumber ? formData.personalDetails.drivingLicenseNumber.trim().toUpperCase() : '',
+          bloodGroup: formData.personalDetails.bloodGroup || '',
+          bankAccountNumber: formData.personalDetails.bankAccountNumber ? formData.personalDetails.bankAccountNumber.trim() : '',
+          ifscCode: formData.personalDetails.ifscCode ? formData.personalDetails.ifscCode.trim().toUpperCase() : '',
+          bankBranchName: formData.personalDetails.bankBranchName ? formData.personalDetails.bankBranchName.trim() : '',
         },
         addressDetails: {
           ...formData.addressDetails,
@@ -647,6 +659,33 @@ export default function CandidateApplyPage() {
                 </select>
               </div>
 
+              {/* Blood Group (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Blood Group <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                </label>
+                <select
+                  value={formData.personalDetails.bloodGroup}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      personalDetails: {
+                        ...prev.personalDetails,
+                        bloodGroup: e.target.value,
+                      },
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                >
+                  <option value="">Select Blood Group</option>
+                  {BLOOD_Group.map((bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Father's Name */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -848,6 +887,80 @@ export default function CandidateApplyPage() {
                     }))
                   }
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                />
+              </div>
+
+              {/* Bank Account Number (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Bank Account No <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10234567890"
+                  value={formData.personalDetails.bankAccountNumber}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      personalDetails: {
+                        ...prev.personalDetails,
+                        bankAccountNumber: e.target.value.replace(/\D/g, ''),
+                      },
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
+                />
+              </div>
+
+              {/* IFSC Code (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  IFSC Code <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={11}
+                  placeholder="e.g. SBIN0001234"
+                  value={formData.personalDetails.ifscCode}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      personalDetails: {
+                        ...prev.personalDetails,
+                        ifscCode: e.target.value.toUpperCase(),
+                      },
+                    }))
+                  }
+                  className={`w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
+                    fieldErrors['ifscCode'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                  }`}
+                />
+                {fieldErrors['ifscCode'] && (
+                  <p className="mt-1 text-xs text-red-600 font-medium">
+                    {fieldErrors['ifscCode']}
+                  </p>
+                )}
+              </div>
+
+              {/* Bank & Branch Name (Optional) */}
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Bank & Branch Name <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. State Bank of India, Thanjavur"
+                  value={formData.personalDetails.bankBranchName}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      personalDetails: {
+                        ...prev.personalDetails,
+                        bankBranchName: e.target.value,
+                      },
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
                 />
               </div>
             </div>

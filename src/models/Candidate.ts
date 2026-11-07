@@ -20,6 +20,9 @@ const PersonalDetailsSchema = new Schema(
     aadhaarNumber: { type: String, required: true, trim: true },
     panNumber: { type: String, trim: true, uppercase: true },
     drivingLicenseNumber: { type: String, trim: true, uppercase: true },
+    bankAccountNumber: { type: String, trim: true },
+    ifscCode: { type: String, trim: true, uppercase: true },
+    bankBranchName: { type: String, trim: true },
   },
   { _id: false }
 );
