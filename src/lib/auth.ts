@@ -11,6 +11,9 @@ function getSessionSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
+
+
+
 export interface SessionPayload {
   userId: string;
   username: string;
