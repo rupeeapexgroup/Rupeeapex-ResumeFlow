@@ -1,7 +1,8 @@
-# ResumeFlow – Rupeeapex Groups of Companies
+# ResumeFlow – Rupeeapex Group of Companies
+
 ## Production-Ready Full-Stack HR Job Application Management Portal
 
-ResumeFlow is a modern, enterprise-grade, secure full-stack HR Job Application Management System custom-engineered for **Rupeeapex Groups of Companies**.
+ResumeFlow is a modern, enterprise-grade, secure full-stack HR Job Application Management System custom-engineered for **Rupeeapex Group of Companies**.
 
 ---
 
@@ -20,7 +21,7 @@ The portal provides two segregated application experiences:
 
 2. **Private Internal HR Management Portal (`/admin/dashboard`, `/admin/candidates`)**:
    - Strictly accessible only to **two pre-authorized HR administrators**.
-   - Pre-provisioned accounts with bcrypt password hashing, brute-force lockout protection (5 failed attempts locks for 15 minutes), and secure HTTP-only JWT sessions.
+   - Pre-provisioned accounts with bcrypt password hashing and secure HTTP-only JWT sessions.
    - **Dashboard**: Real-time MongoDB metrics (Total, New, Under Review, Shortlisted, Selected, Rejected) and role-wise breakdown (GOLD, NIDHI, MFI, CHIT, INSURANCE).
    - **Candidate Management**: Searchable and filterable table with server-side pagination, search by Candidate Name, Application ID, and Mobile Number, and filters by Preferred Role, Status, and Date.
    - **Candidate Details & Status Management**: Full profile view with private photograph retrieval, live status updates, and recruitment notes.
@@ -83,7 +84,7 @@ HR job Application/
 │   │   ├── storage.ts                     # Private photo storage & magic bytes checker
 │   │   └── constants.ts                   # Group roles, statuses, branding tokens
 │   ├── models/
-│   │   ├── Admin.ts                       # Admin schema & lockout logic
+│   │   ├── Admin.ts                       # HR administrator schema
 │   │   ├── Candidate.ts                   # 10-section candidate schema & indexes
 │   │   └── Counter.ts                     # Atomic sequence counter (RAP-YYYY-XXXXXX)
 │   ├── services/
@@ -110,20 +111,26 @@ HR job Application/
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
+
 - **Node.js**: v18+ or v20+ (tested on Node.js v25)
 - **MongoDB**: Local MongoDB instance (`mongodb://127.0.0.1:27017/resumeflow`) or a MongoDB Atlas cluster URI.
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 3. Configure Environment Variables
+
 Copy `.env.example` to `.env.local`:
+
 ```bash
 cp .env.example .env.local
 ```
+
 Key configuration settings in `.env.local`:
+
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 MONGODB_URI=mongodb://127.0.0.1:27017/resumeflow
@@ -138,11 +145,15 @@ HR_ADMIN_2_PASSWORD=RupeeapexHR2@2026
 ```
 
 ### 4. Provision Authorized HR Accounts
+
 Provision the two authorized HR administrators:
+
 ```bash
 npm run seed
 ```
+
 Output:
+
 ```
 --- RESUMEFLOW: Initializing HR Accounts ---
 Newly Provisioned Accounts: [ 'hr.admin1', 'hr.admin2' ]
@@ -151,20 +162,28 @@ Successfully completed HR account provisioning.
 ```
 
 ### 5. Generate Reception QR Code & A4 Poster
+
 The project owner generates the permanent reception QR assets:
+
 ```bash
 npm run generate-qr
 ```
+
 This produces:
+
 - `public/qr/reception-qr.png`: High-resolution QR code pointing to `/apply`
 - `public/qr/reception-poster.pdf`: Ready-to-print A4 Reception Poster with Rupeeapex branding and instructions.
 
 ### 6. Run Automated Test Suite
+
 Run the 18 automated test cases covering authentication, magic bytes, submissions, search, role filters, status updates, and PDF generation:
+
 ```bash
 npm test
 ```
+
 Result:
+
 ```
 ==================================================
 ALL 18 TEST CASES PASSED WITH 100% SUCCESS!
@@ -172,9 +191,11 @@ ALL 18 TEST CASES PASSED WITH 100% SUCCESS!
 ```
 
 ### 7. Start Development Server
+
 ```bash
 npm run dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
@@ -184,7 +205,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 1. **Strict HR Authorization**:
    - Only 2 pre-authorized HR accounts exist. Public admin registration is permanently blocked.
    - Passwords hashed with `bcrypt` (12 salt rounds).
-   - Brute-force protection: 5 failed login attempts locks the account for 15 minutes.
 2. **Session Integrity**:
    - HTTP-only, SameSite=Lax, Secure cookies (`resumeflow_session`).
    - Server-side verification on every API route and dashboard page (`verifySessionFromRequest`).
@@ -228,6 +248,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## 🚢 Production Deployment
 
 ### Option A: MongoDB Atlas + Vercel / Node Server
+
 1. Create a free cluster on [MongoDB Atlas](https://www.mongodb.com/atlas).
 2. Set `MONGODB_URI` in your production environment variables to your Atlas connection string:
    ```
@@ -245,8 +266,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🏢 Rupeeapex Groups of Companies
+## 🏢 Rupeeapex Group of Companies
+
 - **Primary Corporate Color**: `#006B3C` (Rupeeapex Forest Green)
 - **Secondary Accent Color**: `#F5C400` (Rupeeapex Gold)
 - **System Version**: ResumeFlow v1.0 Production
-

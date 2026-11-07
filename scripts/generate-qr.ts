@@ -10,7 +10,21 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 async function generateReceptionAssets() {
   console.log('--- RESUMEFLOW: Generating Reception QR Code & A4 Poster ---');
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  let rawUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+  if (!rawUrl && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    rawUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  } else if (!rawUrl && process.env.VERCEL_URL) {
+    rawUrl = `https://${process.env.VERCEL_URL}`;
+  } else if (!rawUrl) {
+    rawUrl = 'http://localhost:3000';
+  }
+
+  // Ensure protocol and remove any trailing slash
+  let appUrl = rawUrl.trim();
+  if (!appUrl.startsWith('http://') && !appUrl.startsWith('https://')) {
+    appUrl = `https://${appUrl}`;
+  }
+  appUrl = appUrl.replace(/\/+$/, '');
   const applyUrl = `${appUrl}/apply`;
   console.log(`Target Public Application URL: ${applyUrl}`);
 
@@ -93,7 +107,7 @@ async function generateReceptionAssets() {
       height: 70,
       color: primaryGreen,
     });
-    page.drawText('RUPEEAPEX GROUPS OF COMPANIES', {
+    page.drawText('RUPEEAPEX Group OF COMPANIES', {
       x: 50,
       y: currentY - 45,
       size: 20,
@@ -224,7 +238,7 @@ async function generateReceptionAssets() {
   });
 
   // Centered Footer Content with comfortable padding from border
-  const footerTitle = 'Rupeeapex Groups of Companies - Empowering Growth & Prosperity';
+  const footerTitle = 'Rupeeapex Group of Companies';
   const footerTitleWidth = fontBold.widthOfTextAtSize(footerTitle, 10);
   page.drawText(footerTitle, {
     x: (width - footerTitleWidth) / 2,
@@ -234,7 +248,7 @@ async function generateReceptionAssets() {
     color: primaryGreen,
   });
 
-  const helpText = 'Need help? Please contact the reception desk.';
+  const helpText = 'Contact: hr@rupeeapexGroup.com | +91 8925866326';
   const helpTextWidth = fontRegular.widthOfTextAtSize(helpText, 9);
   page.drawText(helpText, {
     x: (width - helpTextWidth) / 2,

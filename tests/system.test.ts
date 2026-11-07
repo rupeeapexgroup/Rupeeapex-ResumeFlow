@@ -76,6 +76,19 @@ async function runTests() {
     assert.strictEqual(sessionPayload.role, 'HR_ADMIN');
     console.log('✔ Test 1.2: Authorized HR login generates valid, secure JWT session');
 
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const failedLogin = await loginAdmin(admin1Username, 'incorrect-password');
+      assert.strictEqual(failedLogin.success, false, 'Invalid credentials must be rejected');
+    }
+
+    const loginAfterFailedAttempts = await loginAdmin(admin1Username, admin1Password);
+    assert.strictEqual(
+      loginAfterFailedAttempts.success,
+      true,
+      'Repeated failed attempts must not lock an authorized account'
+    );
+    console.log('✔ Test 1.3: Repeated failed logins do not lock an authorized account');
+
     // ------------------------------------------------------------------
     // TEST SUITE 2: FILE UPLOAD SECURITY
     // ------------------------------------------------------------------

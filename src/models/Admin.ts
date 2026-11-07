@@ -5,8 +5,6 @@ export interface IAdmin extends Document {
   passwordHash: string;
   role: 'HR_ADMIN';
   isActive: boolean;
-  failedLoginAttempts: number;
-  lockUntil?: Date;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -35,13 +33,6 @@ const AdminSchema = new Schema<IAdmin>(
       type: booleanType(),
       default: true,
     },
-    failedLoginAttempts: {
-      type: Number,
-      default: 0,
-    },
-    lockUntil: {
-      type: Date,
-    },
     lastLoginAt: {
       type: Date,
     },
@@ -56,4 +47,3 @@ function booleanType() {
 }
 
 export const Admin = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', AdminSchema);
-

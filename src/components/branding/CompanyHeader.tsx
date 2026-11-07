@@ -17,7 +17,7 @@ export function CompanyHeader({ subtitle, showBackHome }: CompanyHeaderProps) {
           <div className="relative w-[280px] sm:w-[360px] h-[65px] sm:h-[75px]">
             <Image
               src="/logo/Rupeeapex-fullBanner.jpeg"
-              alt="Rupeeapex Groups of Companies"
+              alt="Rupeeapex Group of Companies"
               fill
               className="object-contain"
               priority

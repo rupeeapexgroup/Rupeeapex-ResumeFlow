@@ -34,7 +34,7 @@ export const EDUCATION_QUALIFICATIONS = [
   'Other Graduate',
 ] as const;
 
-export const BLOOD_GROUPS = [
+export const BLOOD_Group = [
   'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Other'
 ] as const;
 
@@ -51,7 +51,7 @@ export const REFERRAL_SOURCES = [
 ] as const;
 
 export const BRAND = {
-  name: 'Rupeeapex Groups of Companies',
+  name: 'Rupeeapex Group of Companies',
   portalName: 'ResumeFlow',
   tagline: 'HR Job Application Management Portal',
   primaryGreen: '#006B3C',

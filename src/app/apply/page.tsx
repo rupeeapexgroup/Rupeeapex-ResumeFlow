@@ -1416,7 +1416,7 @@ export default function CandidateApplyPage() {
               {/* Question 1: Rupeeapex Ex-Employee Question (Ahead of general work experience) */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  Have you previously worked at Rupeeapex Groups of Companies?
+                  Have you previously worked at Rupeeapex Group of Companies?
                 </span>
                 <div className="flex items-center gap-4 text-sm font-medium shrink-0">
                   <label className="flex items-center gap-1.5 cursor-pointer">
@@ -1979,7 +1979,6 @@ export default function CandidateApplyPage() {
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
                 >
                   <option value="Reference">Reference</option>
-                  <option value="Friend">Friend</option>
                   <option value="Advertisement">Advertisement</option>
                   <option value="Walk-in Direct">Walk-in Direct</option>
                 </select>
@@ -2039,7 +2038,7 @@ export default function CandidateApplyPage() {
             </div>
             <div className="p-6 space-y-5">
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
-                I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief. I understand that any false or misleading statements may lead to disqualification or dismissal.
+                I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief. I understand that any false or misleading statements may lead to disqualification.
               </div>
 
               <div className="flex items-start gap-3">
@@ -2091,7 +2090,7 @@ export default function CandidateApplyPage() {
 
       <footer className="w-full bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
         <div className="max-w-4xl mx-auto px-4">
-          © {new Date().getFullYear()} Rupeeapex Groups of Companies. All rights reserved.
+          © {new Date().getFullYear()} Rupeeapex Group of Companies. All rights reserved.
         </div>
       </footer>
     </div>

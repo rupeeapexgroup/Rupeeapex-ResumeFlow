@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div className="mb-6 text-center">
             <h2 className="text-xl font-bold text-slate-900">Sign in to ResumeFlow</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Internal HR management portal for Rupeeapex Groups
+              Internal HR management portal for Rupeeapex Group
             </p>
           </div>
 

@@ -50,7 +50,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
       height: 32,
       color: primaryGreen,
     });
-    page.drawText('RUPEEAPEX GROUPS OF COMPANIES', {
+    page.drawText('RUPEEAPEX Group OF COMPANIES', {
       x: leftMargin + 12,
       y: currentY - 21,
       size: 13,
@@ -453,7 +453,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   const declarationText1 =
     'I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief.';
   const declarationText2 =
-    'I understand that any false or misleading statements may lead to disqualification or dismissal.';
+    'I understand that any false or misleading statements may lead to disqualification.';
   page.drawText(declarationText1, { x: leftMargin + 6, y: currentY, size: 7, font: fontRegular, color: grayText });
   currentY -= 9;
   page.drawText(declarationText2, { x: leftMargin + 6, y: currentY, size: 7, font: fontRegular, color: grayText });
@@ -492,7 +492,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   });
 
   currentY -= 9;
-  page.drawText('Rupeeapex Groups of Companies | Official HR Job Application Record', {
+  page.drawText('Rupeeapex Group of Companies | Official HR Job Application Record', {
     x: leftMargin + 6,
     y: currentY,
     size: 6.5,
