@@ -248,7 +248,7 @@ async function generateReceptionAssets() {
     color: primaryGreen,
   });
 
-  const helpText = 'Contact: hr@rupeeapexGroup.com | +91 8925866326';
+  const helpText = 'Contact: hr@rupeeapexGroup.com || +91 8925866326';
   const helpTextWidth = fontRegular.widthOfTextAtSize(helpText, 9);
   page.drawText(helpText, {
     x: (width - helpTextWidth) / 2,
