@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -23,6 +23,22 @@ export function AdminSidebar({ currentUsername = 'HR Admin' }: AdminSidebarProps
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [activeUsername, setActiveUsername] = useState(currentUsername);
+
+  useEffect(() => {
+    if (!currentUsername || currentUsername === 'HR Admin') {
+      fetch('/api/auth/me')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.user?.username) {
+            setActiveUsername(data.user.username.toUpperCase());
+          }
+        })
+        .catch(() => {});
+    } else {
+      setActiveUsername(currentUsername);
+    }
+  }, [currentUsername]);
 
   const navItems = [
     {
@@ -140,7 +156,7 @@ export function AdminSidebar({ currentUsername = 'HR Admin' }: AdminSidebarProps
               <Shield className="w-4 h-4" />
             </div>
             <div className="overflow-hidden">
-              <div className="text-xs font-bold text-white truncate">{currentUsername}</div>
+              <div className="text-xs font-bold text-white truncate">{activeUsername}</div>
               <div className="text-[10px] text-emerald-400 font-medium">Authorized HR</div>
             </div>
           </div>

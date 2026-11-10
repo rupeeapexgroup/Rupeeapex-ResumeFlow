@@ -1,7 +1,7 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import { Candidate, ICandidate } from '@/models/Candidate';
 import { getNextApplicationId } from '@/models/Counter';
-import { saveCandidatePhotograph } from '@/lib/storage';
+import { saveCandidatePhotograph, deleteCandidatePhotograph } from '@/lib/storage';
 import { CandidateApplicationInput } from '@/lib/validation';
 import { DashboardStats, PreferredJobRole, ApplicationStatus, CandidateRecord } from '@/types';
 
@@ -304,6 +304,75 @@ export async function updateCandidateStatus(
     ...(updated as any),
     _id: String((updated as any)._id),
   } as unknown as CandidateRecord;
+}
+
+/**
+ * Permanently deletes a single candidate record from MongoDB.
+ * Ensures server-side ID validation, strictly deletes only the target record,
+ * and deletes associated photograph file if not shared by any other candidate.
+ */
+export async function deleteCandidate(
+  idOrAppId: string
+): Promise<{ success: boolean; error?: string; candidate?: { id: string; applicationId: string; fullName: string } }> {
+  await connectToDatabase();
+
+  if (!idOrAppId || typeof idOrAppId !== 'string' || !idOrAppId.trim()) {
+    return { success: false, error: 'Valid candidate ID is required' };
+  }
+
+  const cleanId = idOrAppId.trim();
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(cleanId);
+  const isAppId = /^RAP-\d{4}-\d{6}$/.test(cleanId);
+
+  if (!isObjectId && !isAppId) {
+    return { success: false, error: 'Invalid candidate ID format' };
+  }
+
+  const query = isObjectId
+    ? { _id: cleanId }
+    : { applicationId: cleanId };
+
+  // 1. Locate the exact candidate record
+  const candidate = await Candidate.findOne(query);
+  if (!candidate) {
+    return { success: false, error: 'Candidate application not found' };
+  }
+
+  const photoKey = candidate.photographStorageKey;
+  const candidateIdStr = candidate._id.toString();
+  const appIdStr = candidate.applicationId;
+  const candidateName = candidate.personalDetails?.fullName || 'Candidate';
+
+  // 2. Permanently delete ONLY the single candidate record from MongoDB
+  const deleteResult = await Candidate.deleteOne({ _id: candidate._id });
+  if (deleteResult.deletedCount !== 1) {
+    return { success: false, error: 'Failed to delete candidate record from database' };
+  }
+
+  // 3. Delete candidate photo only if not shared by any other candidate
+  if (photoKey) {
+    try {
+      const remainingCandidateWithPhoto = await Candidate.findOne({
+        photographStorageKey: photoKey,
+      }).lean();
+
+      if (!remainingCandidateWithPhoto) {
+        // Safe to remove the photo from storage
+        await deleteCandidatePhotograph(photoKey);
+      }
+    } catch (photoErr) {
+      console.warn('Error during candidate photo cleanup:', photoErr);
+    }
+  }
+
+  return {
+    success: true,
+    candidate: {
+      id: candidateIdStr,
+      applicationId: appIdStr,
+      fullName: candidateName,
+    },
+  };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

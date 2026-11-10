@@ -186,11 +186,36 @@ export default function CandidateApplyPage() {
     clearFieldError('photograph');
     setPopupError(null);
     setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+
+    // Auto-orient preview using createImageBitmap if available, with FileReader fallback
+    if (typeof window !== 'undefined' && 'createImageBitmap' in window) {
+      createImageBitmap(file, { imageOrientation: 'from-image' })
+        .then((bitmap) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(bitmap, 0, 0);
+            setPhotoPreview(canvas.toDataURL('image/jpeg', 0.92));
+            return;
+          }
+          throw new Error('Canvas context not available');
+        })
+        .catch(() => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            setPhotoPreview(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Handle "Same as Permanent" toggle

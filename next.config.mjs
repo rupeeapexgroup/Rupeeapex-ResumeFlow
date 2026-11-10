@@ -2,7 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverComponentsExternalPackages: ['mongoose', 'bcryptjs'],
+    serverComponentsExternalPackages: ['mongoose', 'bcryptjs', 'sharp'],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/hr/:path*',
+        destination: '/admin/:path*',
+      },
+    ];
   },
 };
 

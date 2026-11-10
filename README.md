@@ -137,8 +137,8 @@ MONGODB_URI=mongodb://127.0.0.1:27017/resumeflow
 SESSION_SECRET=resumeflow_rupeeapex_super_secure_jwt_session_secret_32chars!
 STORAGE_DIR=./storage/uploads
 
-HR_ADMIN_1_USERNAME=hr.admin1
-HR_ADMIN_1_PASSWORD=RupeeapexHR1@2026
+HR_ADMIN_1_USERNAME=RAHR-C213
+HR_ADMIN_1_PASSWORD=vimal@12
 
 HR_ADMIN_2_USERNAME=hr.admin2
 HR_ADMIN_2_PASSWORD=RupeeapexHR2@2026
@@ -232,7 +232,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Confirm receipt of unique ID (e.g., `RAP-2026-000001`).
 3. **HR Login**:
    - Visit [http://localhost:3000/login](http://localhost:3000/login).
-   - Login with `hr.admin1` and password `RupeeapexHR1@2026`.
+   - Login with `RAHR-C213` and password `vimal@12`.
 4. **HR Dashboard & Filtering**:
    - Verify statistics cards update dynamically from MongoDB.
    - Check role-wise application breakdown for GOLD, NIDHI, MFI, CHIT, INSURANCE.

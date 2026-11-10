@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getDashboardStats, getCandidates } from '@/services/candidateService';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
+import { RecentApplicationsTable } from '@/components/dashboard/RecentApplicationsTable';
 import {
   Users,
   Calendar,
@@ -245,96 +246,7 @@ export default async function AdminDashboardPage() {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold">
-                  <tr>
-                    <th className="px-5 py-3.5">Application ID</th>
-                    <th className="px-5 py-3.5">Candidate Name</th>
-                    <th className="px-5 py-3.5">Mobile Number</th>
-                    <th className="px-5 py-3.5">Education</th>
-                    <th className="px-5 py-3.5">Experience</th>
-                    <th className="px-5 py-3.5">Preferred Job Role</th>
-                    <th className="px-5 py-3.5">Application Date</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentCandidates.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-5 py-8 text-center text-slate-500">
-                        No candidate applications submitted yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentCandidates.map((c: any) => {
-                      const roleDisplay = c.preferredJobRole === 'OTHER' && c.preferredJobRoleOther
-                        ? `OTHER (${c.preferredJobRoleOther})`
-                        : c.preferredJobRole;
-
-                      const expDisplay = c.employmentDetails?.hasPreviousExperience
-                        ? `${c.employmentDetails.yearsOfExperience || c.employmentDetails.experienceDurationYears || 1} Yrs`
-                        : 'Fresher';
-
-                      return (
-                        <tr key={c._id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="px-5 py-3.5 font-mono font-bold text-[#006B3C]">
-                            <Link href={`/admin/candidates/${c._id}`} className="hover:underline">
-                              {c.applicationId}
-                            </Link>
-                          </td>
-                          <td className="px-5 py-3.5 font-semibold text-slate-900">
-                            {c.personalDetails.fullName}
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-600">
-                            {c.personalDetails.mobileNumber}
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-600">
-                            {c.educationDetails.highestQualification}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${c.employmentDetails?.hasPreviousExperience ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                              {expDisplay}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200 rounded-md">
-                              {roleDisplay}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-500">
-                            {new Date(c.submittedAt).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </td>
-                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                            <div className="inline-flex items-center gap-1.5">
-                              <Link
-                                href={`/admin/candidates/${c._id}`}
-                                title="View Complete Application Details"
-                                className="p-1.5 text-slate-600 hover:text-[#006B3C] hover:bg-slate-100 rounded-lg transition-colors"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Link>
-                              <a
-                                href={`/api/candidates/${c._id}/pdf`}
-                                download={`Candidate_${c.applicationId}.pdf`}
-                                title="Download Official Application PDF"
-                                className="p-1.5 text-slate-600 hover:text-[#006B3C] hover:bg-slate-100 rounded-lg transition-colors"
-                              >
-                                <Download className="w-4 h-4" />
-                              </a>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <RecentApplicationsTable initialCandidates={recentCandidates} />
           </section>
         </div>
       </main>

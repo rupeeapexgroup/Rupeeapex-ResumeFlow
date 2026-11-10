@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { CandidateRecord } from '@/types';
-import { getCandidatePhotograph } from '@/lib/storage';
+import { getCandidatePhotograph, normalizeImageOrientation } from '@/lib/storage';
 
 export async function generateCandidatePdf(candidate: CandidateRecord): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
@@ -177,17 +177,26 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     try {
       const photoResult = await getCandidatePhotograph(candidate.photographStorageKey);
       if (photoResult && photoResult.buffer) {
+        // Ensure photo is normalized so orientation is never flipped or rotated
+        const normalized = await normalizeImageOrientation(photoResult.buffer);
         let photoImg;
-        if (photoResult.mimeType === 'image/png') {
-          photoImg = await pdfDoc.embedPng(photoResult.buffer);
+        if (normalized.mimeType === 'image/png') {
+          photoImg = await pdfDoc.embedPng(normalized.buffer);
         } else {
-          photoImg = await pdfDoc.embedJpg(photoResult.buffer);
+          photoImg = await pdfDoc.embedJpg(normalized.buffer);
         }
+
+        const availableW = photoBoxWidth - 4;
+        const availableH = photoBoxHeight - 4;
+        const imgDims = photoImg.scaleToFit(availableW, availableH);
+        const offsetX = photoX + 2 + (availableW - imgDims.width) / 2;
+        const offsetY = photoY + 2 + (availableH - imgDims.height) / 2;
+
         page.drawImage(photoImg, {
-          x: photoX + 2,
-          y: photoY + 2,
-          width: photoBoxWidth - 4,
-          height: photoBoxHeight - 4,
+          x: offsetX,
+          y: offsetY,
+          width: imgDims.width,
+          height: imgDims.height,
         });
         photoDrawn = true;
       }

@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary if credentials exist
@@ -61,7 +62,54 @@ export function validateImageMagicBytes(buffer: Buffer): { isValid: boolean; mim
 }
 
 /**
+ * Normalizes image orientation using EXIF metadata and Sharp.
+ * Automatically rotates portrait and landscape images upright based on EXIF tag (1-8),
+ * clears/resets the EXIF orientation tag so downstream renderers (browsers, PDF generators)
+ * do not double-rotate, and ensures optimal JPEG/PNG quality.
+ */
+export async function normalizeImageOrientation(
+  buffer: Buffer
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  try {
+    const { isValid, mimeType } = validateImageMagicBytes(buffer);
+    if (!isValid) {
+      throw new Error('Invalid image file content. Only JPEG and PNG images are permitted.');
+    }
+
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+
+    // Calling .rotate() without arguments auto-orients according to EXIF orientation
+    // and clears/resets the EXIF orientation tag to avoid double-rotation downstream.
+    let pipeline = image.rotate();
+
+    if (metadata.format === 'png' || mimeType === 'image/png') {
+      pipeline = pipeline.png({ quality: 92, compressionLevel: 7 });
+    } else {
+      // High-quality JPEG
+      pipeline = pipeline.jpeg({ quality: 90, mozjpeg: true });
+    }
+
+    const normalizedBuffer = await pipeline.toBuffer();
+    const finalMime = (metadata.format === 'png' || mimeType === 'image/png') ? 'image/png' : 'image/jpeg';
+
+    return {
+      buffer: normalizedBuffer,
+      mimeType: finalMime,
+    };
+  } catch (err: any) {
+    console.warn('Image orientation normalization fallback:', err?.message || err);
+    const { mimeType } = validateImageMagicBytes(buffer);
+    return {
+      buffer,
+      mimeType: mimeType || 'image/jpeg',
+    };
+  }
+}
+
+/**
  * Stores a candidate photograph in Cloudinary (or private local storage as fallback)
+ * Automatically normalizes EXIF orientation before persisting.
  * Returns unique storage key / secure URL
  */
 export async function saveCandidatePhotograph(
@@ -72,10 +120,15 @@ export async function saveCandidatePhotograph(
     throw new Error('Photograph file size exceeds 5MB limit.');
   }
 
-  const { isValid, mimeType } = validateImageMagicBytes(fileBuffer);
+  const { isValid } = validateImageMagicBytes(fileBuffer);
   if (!isValid) {
     throw new Error('Invalid file content. Only real JPEG and PNG images are permitted.');
   }
+
+  // Normalize image orientation before storing so that all downstream consumers
+  // (web preview, candidate profile, dashboard list, downloaded image, and PDF generator)
+  // receive an already normalized, upright image.
+  const { buffer: normalizedBuffer, mimeType } = await normalizeImageOrientation(fileBuffer);
 
   // 1. If Cloudinary is configured, upload directly to Cloudinary
   if (isCloudinaryConfigured()) {
@@ -92,13 +145,13 @@ export async function saveCandidatePhotograph(
             resolve(result);
           }
         );
-        uploadStream.end(fileBuffer);
+        uploadStream.end(normalizedBuffer);
       });
 
       return {
         storageKey: uploadResult.secure_url || uploadResult.url,
         mimeType,
-        size: fileBuffer.length,
+        size: normalizedBuffer.length,
       };
     } catch (uploadError) {
       console.error('Cloudinary upload error, falling back to local disk storage:', uploadError);
@@ -114,12 +167,12 @@ export async function saveCandidatePhotograph(
   const filename = `candidate_${Date.now()}_${randomHex}${ext}`;
   const fullPath = path.join(UPLOAD_DIR, filename);
 
-  await fs.writeFile(fullPath, fileBuffer);
+  await fs.writeFile(fullPath, normalizedBuffer);
 
   return {
     storageKey: filename,
     mimeType,
-    size: fileBuffer.length,
+    size: normalizedBuffer.length,
   };
 }
 
@@ -156,3 +209,52 @@ export async function getCandidatePhotograph(storageKey: string): Promise<{ buff
     return null;
   }
 }
+
+/**
+ * Permanently deletes candidate photograph from storage (local disk or Cloudinary)
+ */
+export async function deleteCandidatePhotograph(storageKey: string): Promise<boolean> {
+  if (!storageKey) return false;
+
+  try {
+    // 1. If remote Cloudinary URL
+    if (storageKey.startsWith('http://') || storageKey.startsWith('https://')) {
+      if (isCloudinaryConfigured()) {
+        try {
+          const urlParts = storageKey.split('/');
+          const uploadIndex = urlParts.indexOf('upload');
+          if (uploadIndex !== -1) {
+            const publicIdWithExt = urlParts.slice(uploadIndex + 2).join('/');
+            const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+              return true;
+            }
+          }
+        } catch (cErr) {
+          console.warn('Cloudinary photo delete warning:', cErr);
+        }
+      }
+      return false;
+    }
+
+    // 2. Local storage
+    const safeFilename = path.basename(storageKey);
+    const fullPath = path.join(UPLOAD_DIR, safeFilename);
+
+    try {
+      await fs.unlink(fullPath);
+      return true;
+    } catch (fsErr: any) {
+      if (fsErr.code === 'ENOENT') {
+        return true; // File already gone
+      }
+      console.warn('Error unlinking photo file:', fsErr);
+      return false;
+    }
+  } catch (err) {
+    console.warn('Failed to delete photograph:', err);
+    return false;
+  }
+}
+

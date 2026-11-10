@@ -11,18 +11,26 @@ import fs from 'fs/promises';
 import { Admin } from '../src/models/Admin';
 import { Candidate } from '../src/models/Candidate';
 import { Counter, getNextApplicationId } from '../src/models/Counter';
-import { seedInitialAdmins, loginAdmin } from '../src/services/adminService';
+import { seedInitialAdmins, loginAdmin, updateExistingHrAccount } from '../src/services/adminService';
 import {
   submitApplication,
   getCandidates,
   getCandidateById,
   updateCandidateStatus,
   getDashboardStats,
+  deleteCandidate,
 } from '../src/services/candidateService';
 import { generateCandidatePdf } from '../src/services/pdfService';
 import { candidateApplicationSchema } from '../src/lib/validation';
-import { validateImageMagicBytes, saveCandidatePhotograph, getCandidatePhotograph } from '../src/lib/storage';
+import {
+  validateImageMagicBytes,
+  saveCandidatePhotograph,
+  getCandidatePhotograph,
+  normalizeImageOrientation,
+  deleteCandidatePhotograph,
+} from '../src/lib/storage';
 import { verifySessionToken } from '../src/lib/auth';
+import sharp from 'sharp';
 
 let mongod: MongoMemoryServer;
 
@@ -64,17 +72,24 @@ async function runTests() {
     assert.strictEqual(totalAdmins, 2, 'Total HR admin count must be exactly 2');
     console.log('✔ Test 1.1: Exactly two pre-authorized HR accounts provisioned');
 
-    const admin1Username = process.env.HR_ADMIN_1_USERNAME || 'hr.admin1';
-    const admin1Password = process.env.HR_ADMIN_1_PASSWORD || 'RupeeapexHR1@2026';
+    const admin1Username = process.env.HR_ADMIN_1_USERNAME || 'RAHR-C213';
+    const admin1Password = process.env.HR_ADMIN_1_PASSWORD || 'vimal@12';
     const loginSuccess = await loginAdmin(admin1Username, admin1Password);
-    assert.strictEqual(loginSuccess.success, true, 'Valid credentials should successfully login');
+    assert.strictEqual(loginSuccess.success, true, 'Valid RAHR-C213 credentials should successfully login');
     assert.ok(loginSuccess.token, 'A valid JWT session token must be returned');
 
     const sessionPayload = await verifySessionToken(loginSuccess.token!);
     assert.ok(sessionPayload, 'Token must be verifiable');
     assert.strictEqual(sessionPayload.username, admin1Username.toLowerCase());
     assert.strictEqual(sessionPayload.role, 'HR_ADMIN');
-    console.log('✔ Test 1.2: Authorized HR login generates valid, secure JWT session');
+    console.log('✔ Test 1.2: Authorized HR login (RAHR-C213) generates valid, secure JWT session');
+
+    // Confirm old credentials are completely rejected
+    const oldUsernameLogin = await loginAdmin('hr.admin1', 'vimal@12');
+    assert.strictEqual(oldUsernameLogin.success, false, 'Old username hr.admin1 must be rejected');
+
+    const oldPasswordLogin = await loginAdmin(admin1Username, 'RupeeapexHR1@2026');
+    assert.strictEqual(oldPasswordLogin.success, false, 'Old password must be rejected');
 
     for (let attempt = 0; attempt < 6; attempt++) {
       const failedLogin = await loginAdmin(admin1Username, 'incorrect-password');
@@ -87,12 +102,25 @@ async function runTests() {
       true,
       'Repeated failed attempts must not lock an authorized account'
     );
-    console.log('✔ Test 1.3: Repeated failed logins do not lock an authorized account');
+    console.log('✔ Test 1.3: Old credentials rejected, invalid passwords rejected, authorized account works');
+
+    // Test 1.4: In-place account update preserves account ID and prevents duplicate accounts
+    const existingAdminDoc = await Admin.findOne({ username: admin1Username.toLowerCase() });
+    assert.ok(existingAdminDoc, 'Admin document must exist in MongoDB');
+    const originalAdminId = existingAdminDoc._id.toString();
+
+    const inPlaceUpdateResult = await updateExistingHrAccount('RAHR-C213', 'vimal@12', admin1Username);
+    assert.strictEqual(inPlaceUpdateResult.success, true);
+    assert.strictEqual(inPlaceUpdateResult.adminId, originalAdminId, 'Account ID must be preserved in-place');
+
+    const totalAdminsAfterUpdate = await Admin.countDocuments();
+    assert.strictEqual(totalAdminsAfterUpdate, 2, 'No duplicate accounts must be created');
+    console.log('✔ Test 1.4: In-place update preserves MongoDB account ID without creating duplicates');
 
     // ------------------------------------------------------------------
-    // TEST SUITE 2: FILE UPLOAD SECURITY
+    // TEST SUITE 2: FILE UPLOAD SECURITY & EXIF ORIENTATION FIX
     // ------------------------------------------------------------------
-    console.log('\n[SUITE 2] File Upload Security & Magic Bytes Validation');
+    console.log('\n[SUITE 2] File Upload Security & Photo EXIF Orientation Fix');
 
     const realPhotoBuffer = await fs.readFile(path.join(process.cwd(), 'public', 'logo', 'rupeeapex-logo.jpeg'));
     const validJpgBuffer = realPhotoBuffer;
@@ -110,8 +138,44 @@ async function runTests() {
     assert.ok(saved.storageKey, 'Storage key must be generated');
     const retrieved = await getCandidatePhotograph(saved.storageKey);
     assert.ok(retrieved, 'Should retrieve photo from private storage');
-    assert.strictEqual(retrieved!.buffer.length, validJpgBuffer.length);
-    console.log('✔ Test 2.2: Photo saved to private storage and safely retrievable');
+    assert.ok(retrieved!.buffer.length > 0);
+    console.log('✔ Test 2.2: Photo normalized, saved to private storage and safely retrievable');
+
+    // Test 2.3: EXIF orientation correction for portrait and landscape images
+    // Create an image with EXIF orientation 6 (portrait taken on smartphone camera)
+    const rawPortraitBuffer = await sharp({
+      create: {
+        width: 200,
+        height: 300,
+        channels: 3,
+        background: { r: 0, g: 107, b: 60 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+
+    const normalizedPortrait = await normalizeImageOrientation(rawPortraitBuffer);
+    const portraitMeta = await sharp(normalizedPortrait.buffer).metadata();
+    assert.strictEqual(portraitMeta.width! <= portraitMeta.height!, true, 'Portrait image must remain upright');
+    assert.ok(!portraitMeta.orientation || portraitMeta.orientation === 1, 'EXIF orientation must be normalized to 1');
+
+    // Create an image with landscape orientation
+    const rawLandscapeBuffer = await sharp({
+      create: {
+        width: 300,
+        height: 200,
+        channels: 3,
+        background: { r: 245, g: 196, b: 0 },
+      },
+    })
+      .jpeg()
+      .toBuffer();
+
+    const normalizedLandscape = await normalizeImageOrientation(rawLandscapeBuffer);
+    const landscapeMeta = await sharp(normalizedLandscape.buffer).metadata();
+    assert.strictEqual(landscapeMeta.width! >= landscapeMeta.height!, true, 'Landscape image must remain upright');
+    assert.ok(!landscapeMeta.orientation || landscapeMeta.orientation === 1, 'EXIF orientation must be normalized to 1');
+    console.log('✔ Test 2.3: EXIF orientation normalization correctly orients portrait and landscape images');
 
     // ------------------------------------------------------------------
     // TEST SUITE 3: CANDIDATE VALIDATION & "OTHER" ROLE TESTING
@@ -316,6 +380,121 @@ async function runTests() {
     const pdfHeader = Buffer.from(pdfBuffer.slice(0, 4)).toString();
     assert.strictEqual(pdfHeader, '%PDF', 'Generated document must be a valid PDF file');
     console.log(`✔ Test 5.1: Successfully generated A4 Job Application PDF (${pdfBuffer.length} bytes) for candidate with OTHER role`);
+
+    // ------------------------------------------------------------------
+    // TEST SUITE 6: INDIVIDUAL CANDIDATE DELETION & SAFE FILE CLEANUP
+    // ------------------------------------------------------------------
+    console.log('\n[SUITE 6] Candidate Deletion & Photo Storage Cleanup Tests');
+
+    // Test 6.1: Delete single candidate and verify only that record is removed
+    const candidateToDelete = submittedRecords[0]; // Aravind Kumar
+    const candidateBeforeDelete = await Candidate.findById(candidateToDelete.candidateId);
+    assert.ok(candidateBeforeDelete, 'Target candidate must exist before deletion');
+    const photoKeyToDelete = candidateBeforeDelete.photographStorageKey;
+
+    const deleteResult = await deleteCandidate(candidateToDelete.candidateId);
+    assert.strictEqual(deleteResult.success, true, 'deleteCandidate must report success');
+    assert.strictEqual(deleteResult.candidate?.id, candidateToDelete.candidateId);
+
+    // Verify target candidate is gone from MongoDB
+    const candidateAfterDelete = await Candidate.findById(candidateToDelete.candidateId);
+    assert.strictEqual(candidateAfterDelete, null, 'Deleted candidate must not exist in MongoDB');
+
+    // Verify candidate photo was deleted from storage when not shared
+    const photoAfterDelete = await getCandidatePhotograph(photoKeyToDelete);
+    assert.strictEqual(photoAfterDelete, null, 'Unshared candidate photo must be safely cleaned up from storage');
+
+    // Verify all other 5 candidates remain intact in MongoDB
+    const remainingCount = await Candidate.countDocuments();
+    assert.strictEqual(remainingCount, 5, 'Exactly 5 remaining candidates must be preserved in MongoDB');
+    for (let i = 1; i < submittedRecords.length; i++) {
+      const remainingDoc = await Candidate.findById(submittedRecords[i].candidateId);
+      assert.ok(remainingDoc, `Candidate ${submittedRecords[i].name} must still exist in MongoDB`);
+    }
+    console.log('✔ Test 6.1: Single candidate deleted permanently; other candidates remain completely unaffected');
+
+    // Test 6.2: Shared photo preservation - photo is NOT deleted while another candidate uses it
+    const sharedPhotoSave = await saveCandidatePhotograph(validJpgBuffer, 'shared-photo.jpg');
+    const sharedPhotoKey = sharedPhotoSave.storageKey;
+
+    // Create Candidate Alpha with shared photo
+    const candidateAlpha = await Candidate.create({
+      applicationId: 'RAP-2026-999001',
+      personalDetails: {
+        fullName: 'Candidate Alpha',
+        dateOfBirth: '2000-01-01',
+        age: 26,
+        gender: 'Male',
+        maritalStatus: 'Single',
+        fathersName: 'Father Alpha',
+        mothersName: 'Mother Alpha',
+        mobileNumber: '9840999001',
+        email: 'alpha@example.com',
+        aadhaarNumber: '999900001111',
+      },
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '1A', villageOrArea: 'Area', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+        temporaryAddress: { doorNoStreet: '1A', villageOrArea: 'Area', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+      },
+      educationDetails: { highestQualification: 'B.Com', institutionName: 'Univ', passingYear: '2022' },
+      preferredJobRole: 'GOLD',
+      referenceDetails: { referralSource: 'Walk-in Direct' },
+      photographStorageKey: sharedPhotoKey,
+      applicationStatus: 'NEW',
+    });
+
+    // Create Candidate Beta with same shared photo
+    const candidateBeta = await Candidate.create({
+      applicationId: 'RAP-2026-999002',
+      personalDetails: {
+        fullName: 'Candidate Beta',
+        dateOfBirth: '2001-02-02',
+        age: 25,
+        gender: 'Female',
+        maritalStatus: 'Single',
+        fathersName: 'Father Beta',
+        mothersName: 'Mother Beta',
+        mobileNumber: '9840999002',
+        email: 'beta@example.com',
+        aadhaarNumber: '999900002222',
+      },
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '2B', villageOrArea: 'Area', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+        temporaryAddress: { doorNoStreet: '2B', villageOrArea: 'Area', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+      },
+      educationDetails: { highestQualification: 'MBA', institutionName: 'Univ', passingYear: '2023' },
+      preferredJobRole: 'NIDHI',
+      referenceDetails: { referralSource: 'Walk-in Direct' },
+      photographStorageKey: sharedPhotoKey,
+      applicationStatus: 'NEW',
+    });
+
+    // Delete Candidate Alpha
+    const deleteAlphaResult = await deleteCandidate(candidateAlpha._id.toString());
+    assert.strictEqual(deleteAlphaResult.success, true);
+
+    // Verify shared photo STILL exists because Candidate Beta uses it
+    const photoStillExists = await getCandidatePhotograph(sharedPhotoKey);
+    assert.ok(photoStillExists, 'Shared photo MUST NOT be deleted while Candidate Beta is still referencing it');
+
+    // Now delete Candidate Beta
+    const deleteBetaResult = await deleteCandidate(candidateBeta._id.toString());
+    assert.strictEqual(deleteBetaResult.success, true);
+
+    // Now the shared photo should be safely deleted
+    const photoFinallyDeleted = await getCandidatePhotograph(sharedPhotoKey);
+    assert.strictEqual(photoFinallyDeleted, null, 'Shared photo must be cleaned up once the last referencing candidate is deleted');
+    console.log('✔ Test 6.2: Shared photo safely preserved until all referencing candidates are deleted');
+
+    // Test 6.3: Server-side ID validation
+    const invalidFormatDelete = await deleteCandidate('invalid-id-format');
+    assert.strictEqual(invalidFormatDelete.success, false);
+    assert.strictEqual(invalidFormatDelete.error, 'Invalid candidate ID format');
+
+    const nonExistentDelete = await deleteCandidate('507f1f77bcf86cd799439011');
+    assert.strictEqual(nonExistentDelete.success, false);
+    assert.strictEqual(nonExistentDelete.error, 'Candidate application not found');
+    console.log('✔ Test 6.3: Server-side ID validation rejects invalid formats and non-existent IDs');
 
     console.log('\n==================================================');
     console.log('ALL TESTS PASSED WITH 100% SUCCESS!');

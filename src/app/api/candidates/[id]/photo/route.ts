@@ -24,9 +24,14 @@ export async function GET(
       return NextResponse.json({ error: 'Photo file not found in storage' }, { status: 404 });
     }
 
+    const isDownload = req.nextUrl.searchParams.get('download') === 'true' || req.nextUrl.searchParams.get('download') === '1';
+    const ext = photoData.mimeType === 'image/png' ? 'png' : 'jpg';
+    const disposition = isDownload ? 'attachment' : 'inline';
+
     return new NextResponse(photoData.buffer as any, {
       headers: {
         'Content-Type': photoData.mimeType,
+        'Content-Disposition': `${disposition}; filename="Candidate_${candidate.applicationId}_Photo.${ext}"`,
         'Cache-Control': 'private, no-cache, no-store, must-revalidate',
       },
     });

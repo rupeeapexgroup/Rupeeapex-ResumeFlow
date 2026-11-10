@@ -26,6 +26,8 @@ import {
   FileText,
   CreditCard,
   Shield,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function CandidateDetailPage() {
@@ -42,6 +44,32 @@ export default function CandidateDetailPage() {
   const [notes, setNotes] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteCandidate = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete candidate application.');
+      }
+
+      router.push('/admin/candidates');
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Error deleting candidate application.');
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     async function loadCandidate() {
@@ -174,7 +202,19 @@ export default function CandidateDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {candidate.photographStorageKey && (
+              <a
+                href={`/api/candidates/${candidate._id}/photo?download=true`}
+                download={`Candidate_${candidate.applicationId}_Photo.jpg`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                title="Download Candidate Photo"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Photo</span>
+              </a>
+            )}
+
             <a
               href={`/api/candidates/${candidate._id}/pdf`}
               download={`Candidate_${candidate.applicationId}.pdf`}
@@ -183,6 +223,16 @@ export default function CandidateDetailPage() {
               <Download className="w-4 h-4" />
               <span>Download Official PDF</span>
             </a>
+
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+              title="Delete Candidate Application"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
           </div>
         </header>
 
@@ -592,6 +642,78 @@ export default function CandidateDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Delete Candidate Application
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Permanent Record Deletion
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <div className="text-xs text-slate-500">Candidate:</div>
+                  <div className="text-sm font-bold text-slate-900">
+                    {candidate.personalDetails.fullName}
+                  </div>
+                  <div className="font-mono text-xs font-semibold text-[#006B3C]">
+                    {candidate.applicationId}
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                  Are you sure you want to permanently delete this candidate application?
+                </p>
+
+                {deleteError && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+                    {deleteError}
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteError(null);
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDeleteCandidate}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {isDeleting ? (
+                    <span>Deleting...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

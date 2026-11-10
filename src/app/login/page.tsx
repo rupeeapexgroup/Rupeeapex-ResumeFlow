@@ -42,7 +42,7 @@ export default function LoginPage() {
       }
 
       // Success: redirect to dashboard
-      router.push('/admin/dashboard');
+      router.push('/hr/dashboard');
       router.refresh();
     } catch (err: any) {
       setErrorMessage('Unable to connect to authentication server. Please check your network.');
@@ -100,7 +100,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. hr.admin1"
+                  placeholder="e.g. RAHR-C213"
                   required
                   autoFocus
                   className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006B3C] focus:bg-white transition-all"
