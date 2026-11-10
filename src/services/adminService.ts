@@ -158,3 +158,88 @@ export async function seedInitialAdmins(): Promise<{ created: string[]; existing
 
   return { created, existing };
 }
+
+export const MAX_ADMIN_ACCOUNTS = 2;
+
+/**
+ * Checks whether new signups are allowed and returns current registration statistics.
+ */
+export async function getSignupStatus(): Promise<{
+  allowed: boolean;
+  totalAccounts: number;
+  maxAccounts: number;
+  remainingSlots: number;
+}> {
+  await connectToDatabase();
+  const totalAccounts = await Admin.countDocuments();
+  return {
+    allowed: totalAccounts < MAX_ADMIN_ACCOUNTS,
+    totalAccounts,
+    maxAccounts: MAX_ADMIN_ACCOUNTS,
+    remainingSlots: Math.max(0, MAX_ADMIN_ACCOUNTS - totalAccounts),
+  };
+}
+
+/**
+ * Registers a new HR Admin account if total accounts in database < MAX_ADMIN_ACCOUNTS (2).
+ * Enforces maximum 2 accounts strictly: once 2 exist, no further accounts can be created.
+ */
+export async function registerAdmin(
+  username: string,
+  password: string
+): Promise<{
+  success: boolean;
+  token?: string;
+  adminId?: string;
+  username?: string;
+  error?: string;
+}> {
+  await connectToDatabase();
+
+  const totalAccounts = await Admin.countDocuments();
+  if (totalAccounts >= MAX_ADMIN_ACCOUNTS) {
+    return {
+      success: false,
+      error: `Registration closed: The maximum limit of ${MAX_ADMIN_ACCOUNTS} HR accounts has already been reached. No more sign-ups are allowed.`,
+    };
+  }
+
+  const normalizedUsername = username.trim().toLowerCase();
+
+  const existing = await Admin.findOne({ username: normalizedUsername });
+  if (existing) {
+    return {
+      success: false,
+      error: `Username '${normalizedUsername}' is already taken. Please choose another username.`,
+    };
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  try {
+    const newAdmin = await Admin.create({
+      username: normalizedUsername,
+      passwordHash,
+      role: 'HR_ADMIN',
+      isActive: true,
+    });
+
+    const token = await createSessionToken({
+      userId: newAdmin._id.toString(),
+      username: newAdmin.username,
+      role: newAdmin.role,
+    });
+
+    return {
+      success: true,
+      token,
+      adminId: newAdmin._id.toString(),
+      username: newAdmin.username,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Failed to create account due to server validation.',
+    };
+  }
+}

@@ -6,6 +6,22 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+export const signupSchema = z
+  .object({
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username must not exceed 30 characters')
+      .regex(/^[a-zA-Z0-9_.-]+$/, 'Username can only contain letters, numbers, dots, hyphens, and underscores')
+      .trim(),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(6, 'Confirm password must be at least 6 characters'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
 export const statusUpdateSchema = z.object({
   applicationStatus: z.enum(['NEW', 'UNDER_REVIEW', 'SHORTLISTED', 'REJECTED', 'SELECTED']),
   statusNotes: z.string().max(1000).optional(),

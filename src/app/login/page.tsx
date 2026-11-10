@@ -166,11 +166,23 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            <div className="text-center pt-2">
+              <Link
+                href="/signup"
+                className="text-xs font-semibold text-[#006B3C] hover:underline inline-flex items-center gap-1.5"
+              >
+                <span>Need an account? Sign Up</span>
+                <span className="text-[10px] bg-emerald-100 text-[#006B3C] px-2 py-0.5 rounded-full font-bold">
+                  Max 2 Accounts
+                </span>
+              </Link>
+            </div>
           </form>
 
-          {/* Quick hint for initial development */}
+          {/* Quick hint for security */}
           <div className="mt-6 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
-            <span className="font-semibold">Security Note:</span> Public registration is permanently disabled. HR credentials are pre-provisioned via secure server configuration.
+            <span className="font-semibold">Security Note:</span> Only a maximum of 2 HR Admin accounts are allowed. Once 2 accounts are registered, sign-up is permanently locked.
           </div>
         </div>
 

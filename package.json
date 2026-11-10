@@ -10,6 +10,8 @@
     "test": "tsx tests/system.test.ts",
     "seed": "tsx scripts/create-admins.ts",
     "update-hr": "tsx scripts/update-hr-credentials.ts",
+    "list-admins": "tsx scripts/manage-admins.ts list",
+    "reset-admins": "tsx scripts/manage-admins.ts reset",
     "generate-qr": "tsx scripts/generate-qr.ts"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "react-dom": "^18.3.1",
     "sharp": "^0.35.5",
     "tailwind-merge": "^2.5.4",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

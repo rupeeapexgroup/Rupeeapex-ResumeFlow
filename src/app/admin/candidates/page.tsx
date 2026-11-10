@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export default function AdminCandidatesPage() {
@@ -39,6 +40,9 @@ export default function AdminCandidatesPage() {
   const [dateRange, setDateRange] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
 
   // Deletion states
   const [candidateToDelete, setCandidateToDelete] = useState<{
@@ -152,6 +156,49 @@ export default function AdminCandidatesPage() {
     setEndDate('');
   };
 
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('search', search.trim());
+      if (selectedRole !== 'ALL') params.set('role', selectedRole);
+      if (selectedEducation !== 'ALL') params.set('education', selectedEducation);
+      if (selectedExperience !== 'ALL') params.set('experience', selectedExperience);
+      if (applicantType !== 'ALL') params.set('applicantType', applicantType);
+      if (selectedAge !== 'ALL') params.set('ageRange', selectedAge);
+      if (selectedGender !== 'ALL') params.set('gender', selectedGender);
+
+      if (dateRange !== 'ALL') {
+        if (dateRange === 'custom') {
+          if (startDate) params.set('startDate', startDate);
+          if (endDate) params.set('endDate', endDate);
+        } else {
+          params.set('dateRange', dateRange);
+        }
+      }
+
+      const res = await fetch(`/api/candidates/export?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error('Failed to export Excel file');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Rupeeapex_Candidates_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Export error:', err);
+      alert('Failed to export candidates to Excel. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       <AdminSidebar />
@@ -165,13 +212,25 @@ export default function AdminCandidatesPage() {
               Filter by role, education, experience, and application date
             </p>
           </div>
-          <button
-            onClick={() => fetchCandidates(pagination.page)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors self-start sm:self-auto"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <button
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#006B3C] hover:bg-[#005530] disabled:bg-emerald-300 text-white text-xs font-semibold rounded-xl transition-all shadow-sm disabled:cursor-not-allowed"
+              title="Export all matching candidates to Excel (.xlsx)"
+            >
+              <FileSpreadsheet className={`w-3.5 h-3.5 ${isExporting ? 'animate-spin' : ''}`} />
+              <span>{isExporting ? 'Exporting...' : 'Export Excel'}</span>
+            </button>
+
+            <button
+              onClick={() => fetchCandidates(pagination.page)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </header>
 
         <div className="p-6 space-y-6 max-w-7xl w-full">

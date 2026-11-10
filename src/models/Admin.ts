@@ -42,6 +42,17 @@ const AdminSchema = new Schema<IAdmin>(
   }
 );
 
+AdminSchema.pre('save', async function (next) {
+  if (this.isNew) {
+    const adminModel = (this.constructor as mongoose.Model<IAdmin>);
+    const count = await adminModel.countDocuments();
+    if (count >= 2) {
+      return next(new Error('Sign up limit reached: Maximum 2 accounts are allowed in the database. Additional registrations are blocked.'));
+    }
+  }
+  next();
+});
+
 function booleanType() {
   return Boolean;
 }
