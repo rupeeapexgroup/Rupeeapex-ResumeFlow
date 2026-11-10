@@ -873,7 +873,7 @@ export default function CandidateApplyPage() {
               {/* PAN Number (Optional) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  PAN Number <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  PAN Number <span className="text-slate-400 font-normal text-[11px]"></span>
                 </label>
                 <input
                   type="text"
@@ -896,7 +896,7 @@ export default function CandidateApplyPage() {
               {/* Driving License Number (Optional) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Driving License Number <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  Driving License Number <span className="text-slate-400 font-normal text-[11px]"></span>
                 </label>
                 <input
                   type="text"
@@ -918,7 +918,7 @@ export default function CandidateApplyPage() {
               {/* Bank Account Number (Optional) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Bank Account No <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  Bank Account No <span className="text-slate-400 font-normal text-[11px]"></span>
                 </label>
                 <input
                   type="text"
@@ -940,7 +940,7 @@ export default function CandidateApplyPage() {
               {/* IFSC Code (Optional) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  IFSC Code <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  IFSC Code <span className="text-slate-400 font-normal text-[11px]"></span>
                 </label>
                 <input
                   type="text"
@@ -970,7 +970,7 @@ export default function CandidateApplyPage() {
               {/* Bank & Branch Name (Optional) */}
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Bank & Branch Name <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                  Bank & Branch Name <span className="text-slate-400 font-normal text-[11px]"></span>
                 </label>
                 <input
                   type="text"
