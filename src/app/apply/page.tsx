@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -21,11 +21,14 @@ import {
   Camera,
   CheckSquare,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Printer,
   UploadCloud,
   FileCheck,
   X,
+  WifiOff,
+  ServerCrash,
 } from 'lucide-react';
 
 export default function CandidateApplyPage() {
@@ -119,9 +122,45 @@ export default function CandidateApplyPage() {
 
   // Submission & UI states
   const [submitting, setSubmitting] = useState(false);
-  const [popupError, setPopupError] = useState<string | null>(null);
+  const [errorPopup, setErrorPopup] = useState<{
+    title: string;
+    message: string;
+    type?: 'validation' | 'network' | 'photo' | 'server' | 'database' | 'general';
+  } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const showPopupError = (
+    message: string,
+    title = 'Please Check Details',
+    type: 'validation' | 'network' | 'photo' | 'server' | 'database' | 'general' = 'general'
+  ) => {
+    setErrorPopup({ title, message, type });
+  };
+
+  const closePopupError = () => {
+    setErrorPopup(null);
+  };
+
+  // Lock body scroll when popup is active and handle Escape key
+  useEffect(() => {
+    if (errorPopup) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setErrorPopup(null);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [errorPopup]);
 
   // Error tracking helpers
   const clearFieldError = (field: string) => {
@@ -165,26 +204,49 @@ export default function CandidateApplyPage() {
     }));
   };
 
-  // Handle Photo selection
+  // Handle Photo selection with immediate strict 5 MB validation
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // A & C. Immediate file format validation
     const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(file.name);
     if (!isImage) {
-      setFieldErrors(prev => ({ ...prev, photograph: 'Please select a valid image file (JPEG or PNG format only).' }));
-      setPopupError('Please select a valid image file (JPEG or PNG format only).');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      e.target.value = '';
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      const invalidFormatMsg = 'Please select a valid image file (JPEG, PNG, or WEBP format only).';
+      setFieldErrors((prev) => ({ ...prev, photograph: invalidFormatMsg }));
+      showPopupError(invalidFormatMsg, 'Invalid File Format', 'photo');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setFieldErrors(prev => ({ ...prev, photograph: 'Photograph size must be less than 5 MB.' }));
-      setPopupError('Photograph size must be less than 5 MB.');
+    // A & B & C. Strict 5 MB limit immediate validation (5 MB = 5 * 1024 * 1024 bytes)
+    const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_PHOTO_BYTES) {
+      // Clear file selection and form state immediately
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      e.target.value = '';
+      setPhotoFile(null);
+      setPhotoPreview(null);
+
+      const sizeErrorMsg = 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.';
+      setFieldErrors((prev) => ({
+        ...prev,
+        photograph: sizeErrorMsg,
+      }));
+      showPopupError(
+        sizeErrorMsg,
+        'Photo Size Exceeded',
+        'photo'
+      );
       return;
     }
 
+    // D. Valid image selection
     clearFieldError('photograph');
-    setPopupError(null);
+    closePopupError();
     setPhotoFile(file);
 
     // Auto-orient preview using createImageBitmap if available, with FileReader fallback
@@ -235,7 +297,7 @@ export default function CandidateApplyPage() {
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPopupError(null);
+    closePopupError();
     const newErrors: Record<string, string> = {};
 
     // Validate Photograph
@@ -342,8 +404,35 @@ export default function CandidateApplyPage() {
     // If any validation failed, set errors and show popup
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
-      const firstMessage = Object.values(newErrors)[0];
-      setPopupError(firstMessage);
+      const firstKey = Object.keys(newErrors)[0];
+      const firstMessage = newErrors[firstKey];
+
+      // Dismiss mobile virtual keyboard if open
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      showPopupError(
+        firstMessage,
+        firstKey === 'photograph' ? 'Photograph Required' : 'Please Check Details',
+        firstKey === 'photograph' ? 'photo' : 'validation'
+      );
+
+      // Smooth scroll to the invalid field on mobile/desktop
+      const errorEl = document.querySelector(`[name="${firstKey}"], #${firstKey}, [data-field="${firstKey}"]`);
+      if (errorEl) {
+        errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Check device internet connectivity
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      showPopupError(
+        'No internet connection detected. Please check your Wi-Fi or mobile data network and try again.',
+        'Internet Connection Error',
+        'network'
+      );
       return;
     }
 
@@ -373,15 +462,83 @@ export default function CandidateApplyPage() {
       sendFormData.append('data', JSON.stringify(payload));
       sendFormData.append('photograph', photoFile!);
 
-      const res = await fetch('/api/applications', {
-        method: 'POST',
-        body: sendFormData,
-      });
+      let res: Response;
+      try {
+        res = await fetch('/api/applications', {
+          method: 'POST',
+          body: sendFormData,
+        });
+      } catch (fetchErr: any) {
+        console.error('Fetch network submission error:', fetchErr);
+        showPopupError(
+          'Network connection error while submitting. Please check your internet connection and try again.',
+          'Network Connection Error',
+          'network'
+        );
+        setSubmitting(false);
+        return;
+      }
 
-      const data = await res.json();
+      // Safely parse JSON or text without crashing in catch block
+      let data: any = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          console.error('Failed to parse API JSON response:', jsonErr);
+          data = null;
+        }
+      } else {
+        try {
+          const rawText = await res.text();
+          data = { error: rawText };
+        } catch {
+          data = null;
+        }
+      }
 
       if (!res.ok) {
-        if (data.details && Array.isArray(data.details)) {
+        // HTTP 413 Payload Too Large (Oversized photo)
+        if (res.status === 413) {
+          showPopupError(
+            'The uploaded photograph exceeds the maximum server limit of 5 MB. Please select a smaller photo.',
+            'Photo Size Exceeded',
+            'photo'
+          );
+          setFieldErrors((prev) => ({
+            ...prev,
+            photograph: 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.',
+          }));
+          setSubmitting(false);
+          return;
+        }
+
+        // HTTP 429 Rate limit
+        if (res.status === 429) {
+          showPopupError(
+            'Too many submission attempts. Please wait a moment and try again.',
+            'Submission Limit Reached',
+            'server'
+          );
+          setSubmitting(false);
+          return;
+        }
+
+        // HTTP 5xx Server errors
+        if (res.status >= 500) {
+          const serverMsg = data?.error || 'A server error occurred while processing your application. Please try again shortly.';
+          showPopupError(
+            serverMsg,
+            'Server Error',
+            'server'
+          );
+          setSubmitting(false);
+          return;
+        }
+
+        // HTTP 4xx Validation / Input errors
+        if (data?.details && Array.isArray(data.details)) {
           const apiErrors: Record<string, string> = {};
           data.details.forEach((issue: any) => {
             const key = issue.path[issue.path.length - 1];
@@ -389,15 +546,29 @@ export default function CandidateApplyPage() {
           });
           setFieldErrors(apiErrors);
         }
-        setPopupError(data.error || 'Failed to submit application. Please review the highlighted fields in red.');
+
+        const errorMessage = data?.error || 'Failed to submit application. Please review the highlighted fields in red.';
+        const isPhotoError = /photo|photograph|image/i.test(errorMessage);
+        showPopupError(
+          errorMessage,
+          isPhotoError ? 'Photo Upload Error' : 'Please Check Details',
+          isPhotoError ? 'photo' : 'validation'
+        );
         setSubmitting(false);
         return;
       }
 
+      // Application successfully submitted
       setIsSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      setPopupError('Network connection error while submitting. Please check your internet connection and try again.');
+    } catch (unhandledErr: any) {
+      console.error('Unhandled submission error:', unhandledErr);
+      showPopupError(
+        unhandledErr?.message || 'An unexpected error occurred while submitting. Please try again.',
+        'Submission Error',
+        'general'
+      );
+    } finally {
       setSubmitting(false);
     }
   };
@@ -442,7 +613,79 @@ export default function CandidateApplyPage() {
   // CANDIDATE APPLICATION FORM SCREEN
   // ==========================================
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center relative">
+      {/* Floating Notification Popup Modal (Ensured top z-index, auto-centered, responsive on mobile & desktop) */}
+      {errorPopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="error-modal-title"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closePopupError();
+            }
+          }}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-red-100 max-w-sm sm:max-w-md w-full p-6 sm:p-7 text-center relative my-auto animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Close Icon Button */}
+            <button
+              type="button"
+              onClick={closePopupError}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#006B3C]"
+              aria-label="Close dialog"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Error Type Icon */}
+            <div
+              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm ${
+                errorPopup.type === 'network'
+                  ? 'bg-amber-100 text-amber-700'
+                  : errorPopup.type === 'photo'
+                  ? 'bg-orange-100 text-orange-700'
+                  : errorPopup.type === 'server' || errorPopup.type === 'database'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {errorPopup.type === 'network' ? (
+                <WifiOff className="w-7 h-7" />
+              ) : errorPopup.type === 'photo' ? (
+                <Camera className="w-7 h-7" />
+              ) : errorPopup.type === 'server' || errorPopup.type === 'database' ? (
+                <ServerCrash className="w-7 h-7" />
+              ) : (
+                <AlertCircle className="w-7 h-7" />
+              )}
+            </div>
+
+            {/* Error Title */}
+            <h3 id="error-modal-title" className="text-base sm:text-lg font-bold text-slate-900 mb-2">
+              {errorPopup.title || 'Please Check Details'}
+            </h3>
+
+            {/* Error Message */}
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6 font-medium break-words">
+              {errorPopup.message}
+            </p>
+
+            {/* OK, Got It Action Button */}
+            <button
+              type="button"
+              onClick={closePopupError}
+              className="w-full py-3 px-5 bg-[#006B3C] hover:bg-[#005530] text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#006B3C] focus:ring-offset-2 active:scale-[0.98]"
+            >
+              OK, Got It
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-4xl w-full px-4 py-8 sm:py-10">
         {/* Exact Rupeeapex Company Logo Prominently Displayed */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 text-center flex flex-col items-center">
@@ -463,36 +706,6 @@ export default function CandidateApplyPage() {
             Please fill in all the details accurately as per your official records.
           </p>
         </div>
-
-        {/* Floating Notification Popup Modal */}
-        {popupError && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl border border-red-100 max-w-sm w-full p-6 text-center relative animate-scaleUp">
-              <button
-                type="button"
-                onClick={() => setPopupError(null)}
-                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1.5">Please Check Details</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-5 font-medium">
-                {popupError}
-              </p>
-              <button
-                type="button"
-                onClick={() => setPopupError(null)}
-                className="w-full py-2.5 px-4 bg-[#006B3C] hover:bg-[#005530] text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-sm"
-              >
-                OK, Got It
-              </button>
-            </div>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* ==================================================== */}
@@ -559,12 +772,12 @@ export default function CandidateApplyPage() {
 
                 <div className="text-xs text-slate-500 leading-relaxed">
                   {fieldErrors['photograph'] && (
-                    <p className="text-xs font-bold text-red-600 mb-1 flex items-center gap-1 justify-center sm:justify-start">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>{fieldErrors['photograph']}</span>
-                    </p>
+                    <div className="p-3 mb-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-start gap-2 shadow-sm animate-fadeIn">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">{fieldErrors['photograph']}</span>
+                    </div>
                   )}
-                  <p>• Accepted formats: <strong>JPG, JPEG, PNG</strong> (Max file size: 5 MB).</p>
+                  <p>• Accepted formats: <strong>JPG, JPEG, PNG, WEBP</strong> (Max file size: 5 MB).</p>
                   <p>• You may capture directly from your mobile camera or pick from gallery.</p>
                 </div>
               </div>

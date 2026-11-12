@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { candidateApplicationSchema } from '@/lib/validation';
 import { submitApplication } from '@/services/candidateService';
+import { validateImageMagicBytes } from '@/lib/storage';
 
 // Simple in-memory rate limiting map for public applications
 const ipSubmissionTracker = new Map<string, { count: number; resetAt: number }>();
@@ -58,12 +59,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: message, details: validationResult.error.errors }, { status: 400 });
     }
 
+    // Pre-check file size before reading full buffer
+    const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB = 5,242,880 bytes
+    if (photoFile.size > MAX_PHOTO_BYTES) {
+      return NextResponse.json(
+        { error: 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.' },
+        { status: 413 }
+      );
+    }
+
     // Convert File to Buffer
     const arrayBuffer = await photoFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    if (buffer.length > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Photograph exceeds maximum allowed size (5MB)' }, { status: 400 });
+    if (buffer.length > MAX_PHOTO_BYTES) {
+      return NextResponse.json(
+        { error: 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.' },
+        { status: 413 }
+      );
+    }
+
+    // Validate real file content via magic bytes (don't trust client-supplied MIME or extension alone)
+    const { isValid } = validateImageMagicBytes(buffer);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid photograph format. Please upload a genuine JPG, JPEG, PNG, or WEBP image file.' },
+        { status: 400 }
+      );
     }
 
     const result = await submitApplication(

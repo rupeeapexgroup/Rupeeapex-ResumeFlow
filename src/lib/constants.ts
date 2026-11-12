@@ -18,7 +18,6 @@ export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string; co
 ];
 
 export const EDUCATION_QUALIFICATIONS = [
-  '10th / SSLC',
   '12th / HSC',
   'ITI / Diploma',
   'B.Com',

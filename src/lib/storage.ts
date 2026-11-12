@@ -58,6 +58,21 @@ export function validateImageMagicBytes(buffer: Buffer): { isValid: boolean; mim
     return { isValid: true, mimeType: 'image/png' };
   }
 
+  // WebP magic bytes: RIFF .... WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return { isValid: true, mimeType: 'image/webp' };
+  }
+
   return { isValid: false, mimeType: '' };
 }
 
@@ -73,7 +88,7 @@ export async function normalizeImageOrientation(
   try {
     const { isValid, mimeType } = validateImageMagicBytes(buffer);
     if (!isValid) {
-      throw new Error('Invalid image file content. Only JPEG and PNG images are permitted.');
+      throw new Error('Invalid image file content. Only genuine JPEG, PNG, and WEBP images are permitted.');
     }
 
     const image = sharp(buffer);
@@ -86,7 +101,7 @@ export async function normalizeImageOrientation(
     if (metadata.format === 'png' || mimeType === 'image/png') {
       pipeline = pipeline.png({ quality: 92, compressionLevel: 7 });
     } else {
-      // High-quality JPEG
+      // High-quality JPEG (also normalizes WebP to JPEG for downstream PDF generator compatibility)
       pipeline = pipeline.jpeg({ quality: 90, mozjpeg: true });
     }
 
@@ -117,7 +132,7 @@ export async function saveCandidatePhotograph(
   originalFilename: string
 ): Promise<{ storageKey: string; mimeType: string; size: number }> {
   if (fileBuffer.length > MAX_FILE_SIZE) {
-    throw new Error('Photograph file size exceeds 5MB limit.');
+    throw new Error('Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.');
   }
 
   const { isValid } = validateImageMagicBytes(fileBuffer);
