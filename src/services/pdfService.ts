@@ -3,6 +3,7 @@ import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { CandidateRecord } from '@/types';
 import { getCandidatePhotograph, normalizeImageOrientation } from '@/lib/storage';
+import { formatDateOfBirth, formatIndianDate, formatIndianTime, formatPanNumber, formatNil } from '@/lib/formatters';
 
 export async function generateCandidatePdf(candidate: CandidateRecord): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
@@ -133,7 +134,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
 
     // Column 1
     page.drawText(label1 + ':', { x: col1X, y: yPos, size: 7.2, font: fontBold, color: grayText });
-    page.drawText((val1 || 'N/A').substring(0, 32), {
+    page.drawText(formatNil(val1).substring(0, 32), {
       x: v1X,
       y: yPos,
       size: 7.6,
@@ -144,7 +145,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     // Column 2
     if (label2) {
       page.drawText(label2 + ':', { x: col2X, y: yPos, size: 7.2, font: fontBold, color: grayText });
-      page.drawText((val2 || 'N/A').substring(0, 32), {
+      page.drawText(formatNil(val2).substring(0, 32), {
         x: v2X,
         y: yPos,
         size: 7.6,
@@ -234,11 +235,18 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
   );
+  const dobFormatted = formatDateOfBirth(candidate.personalDetails.dateOfBirth);
+  const dobText = dobFormatted === 'NIL' ? 'NIL' : `${dobFormatted} (${candidate.personalDetails.age ? `${candidate.personalDetails.age} yrs` : 'NIL'})`;
+
+  const maritalVal = candidate.personalDetails.maritalStatus
+    ? `${candidate.personalDetails.maritalStatus}${candidate.personalDetails.bloodGroup ? ` (${candidate.personalDetails.bloodGroup})` : ''}`
+    : 'NIL';
+
   currentY = drawAlignedRow(
     'Date of Birth',
-    `${candidate.personalDetails.dateOfBirth} (${candidate.personalDetails.age} yrs)`,
+    dobText,
     'Marital / Blood',
-    `${candidate.personalDetails.maritalStatus}${candidate.personalDetails.bloodGroup ? ` (${candidate.personalDetails.bloodGroup})` : ''}`,
+    maritalVal,
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
   );
@@ -254,7 +262,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Mobile Number',
     candidate.personalDetails.mobileNumber,
     'Alt Mobile',
-    candidate.personalDetails.alternativeMobileNumber || 'N/A',
+    candidate.personalDetails.alternativeMobileNumber || 'NIL',
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
   );
@@ -262,15 +270,15 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Email Address',
     candidate.personalDetails.email,
     'Aadhaar No',
-    candidate.personalDetails.aadhaarNumber || 'N/A',
+    candidate.personalDetails.aadhaarNumber || 'NIL',
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 60 }
   );
   currentY = drawAlignedRow(
     'PAN Number',
-    candidate.personalDetails.panNumber || 'N/A',
+    formatPanNumber(candidate.personalDetails.panNumber),
     'Driving License',
-    candidate.personalDetails.drivingLicenseNumber || 'N/A',
+    candidate.personalDetails.drivingLicenseNumber || 'NIL',
     currentY,
     { customWidth: personalWidth, label1Width: 70, label2Width: 68 }
   );
@@ -282,9 +290,9 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   if (candidate.personalDetails?.bankAccountNumber || candidate.personalDetails?.ifscCode) {
     currentY = drawAlignedRow(
       'Bank Account No',
-      `${candidate.personalDetails.bankAccountNumber || 'N/A'} (IFSC: ${candidate.personalDetails.ifscCode || 'N/A'})`,
+      `${candidate.personalDetails.bankAccountNumber || 'NIL'} (IFSC: ${candidate.personalDetails.ifscCode || 'NIL'})`,
       'Bank & Branch',
-      candidate.personalDetails.bankBranchName || 'N/A',
+      candidate.personalDetails.bankBranchName || 'NIL',
       currentY,
       { label1Width: 88, label2Width: 78 }
     );
@@ -295,26 +303,26 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   currentY = drawSectionHeader('2. FAMILY DETAILS', currentY);
   currentY = drawAlignedRow(
     "Father's Occupation",
-    candidate.familyDetails?.fathersOccupation || 'N/A',
+    candidate.familyDetails?.fathersOccupation || 'NIL',
     "Father's Mobile",
-    candidate.familyDetails?.fathersMobile || 'N/A',
+    candidate.familyDetails?.fathersMobile || 'NIL',
     currentY,
     { label1Width: 92, label2Width: 78 }
   );
   currentY = drawAlignedRow(
     "Mother's Occupation",
-    candidate.familyDetails?.mothersOccupation || 'N/A',
+    candidate.familyDetails?.mothersOccupation || 'NIL',
     "Mother's Mobile",
-    candidate.familyDetails?.mothersMobile || 'N/A',
+    candidate.familyDetails?.mothersMobile || 'NIL',
     currentY,
     { label1Width: 92, label2Width: 78 }
   );
   if (candidate.familyDetails?.spouseOccupation || candidate.personalDetails.maritalStatus === 'Married') {
     currentY = drawAlignedRow(
       'Spouse Occupation',
-      candidate.familyDetails?.spouseOccupation || 'N/A',
+      candidate.familyDetails?.spouseOccupation || 'NIL',
       'Spouse Name',
-      candidate.personalDetails?.spouseName || candidate.familyDetails?.spouseName || 'N/A',
+      candidate.personalDetails?.spouseName || candidate.familyDetails?.spouseName || 'NIL',
       currentY,
       { label1Width: 92, label2Width: 78 }
     );
@@ -323,12 +331,32 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
 
   // 6. Section 3: Address Details
   currentY = drawSectionHeader('3. ADDRESS DETAILS', currentY);
-  const perm = candidate.addressDetails.permanentAddress;
-  const temp = candidate.addressDetails.temporaryAddress;
-  const permStr = `${perm.doorNoStreet}, ${perm.villageOrArea}, ${perm.taluk}, ${perm.district}, ${perm.state} - ${perm.pincode}`;
-  const tempStr = candidate.addressDetails.sameAsPermanent
-    ? 'Same as Permanent Address'
-    : `${temp.doorNoStreet}, ${temp.villageOrArea}, ${temp.taluk}, ${temp.district}, ${temp.state} - ${temp.pincode}`;
+  const perm = candidate.addressDetails?.permanentAddress || {} as any;
+  const temp = candidate.addressDetails?.temporaryAddress || {} as any;
+  const permParts = [
+    perm.doorNoStreet,
+    perm.villageOrArea,
+    perm.taluk,
+    perm.district,
+    perm.state,
+    perm.pincode ? `- ${perm.pincode}` : '',
+  ].filter((p) => p && String(p).trim() && String(p).trim() !== '-');
+  const permStr = permParts.length > 0 ? permParts.join(', ') : 'NIL';
+
+  let tempStr = 'NIL';
+  if (candidate.addressDetails?.sameAsPermanent) {
+    tempStr = 'Same as Permanent Address';
+  } else {
+    const tempParts = [
+      temp.doorNoStreet,
+      temp.villageOrArea,
+      temp.taluk,
+      temp.district,
+      temp.state,
+      temp.pincode ? `- ${temp.pincode}` : '',
+    ].filter((p) => p && String(p).trim() && String(p).trim() !== '-');
+    tempStr = tempParts.length > 0 ? tempParts.join(', ') : 'NIL';
+  }
 
   page.drawText('Permanent Address:', { x: leftMargin + 6, y: currentY, size: 7.2, font: fontBold, color: grayText });
   currentY -= 10;
@@ -354,7 +382,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Institution Name',
     candidate.educationDetails.institutionName,
     'Course / Details',
-    candidate.educationDetails.educationDetails || candidate.educationDetails.additionalQualification || 'N/A',
+    candidate.educationDetails.educationDetails || candidate.educationDetails.additionalQualification || 'NIL',
     currentY,
     { label1Width: 95, label2Width: 75 }
   );
@@ -367,7 +395,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Previous Experience',
     hasExp ? 'Yes (Experienced)' : 'No (Fresher)',
     'Previous Company',
-    hasExp ? (candidate.employmentDetails.previousCompany || candidate.employmentDetails.previousCompanyName || 'N/A') : 'N/A',
+    hasExp ? (candidate.employmentDetails.previousCompany || candidate.employmentDetails.previousCompanyName || 'NIL') : 'NIL',
     currentY,
     { label1Width: 92, label2Width: 80 }
   );
@@ -377,7 +405,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
       : `${candidate.employmentDetails.experienceDurationYears || 0} Yrs, ${candidate.employmentDetails.experienceDurationMonths || 0} Mos`;
     currentY = drawAlignedRow(
       'Previous Designation',
-      candidate.employmentDetails.previousDesignation || candidate.employmentDetails.previousOccupation || 'N/A',
+      candidate.employmentDetails.previousDesignation || candidate.employmentDetails.previousOccupation || 'NIL',
       'Years of Experience',
       yearsStr,
       currentY,
@@ -389,7 +417,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
         'Company 2',
         candidate.employmentDetails.previousCompany2,
         'Designation / Exp',
-        `${candidate.employmentDetails.previousDesignation2 || 'N/A'} (${candidate.employmentDetails.yearsOfExperience2 || 0} Yrs)`,
+        `${candidate.employmentDetails.previousDesignation2 || 'NIL'} (${candidate.employmentDetails.yearsOfExperience2 || 0} Yrs)`,
         currentY,
         { label1Width: 92, label2Width: 80 }
       );
@@ -400,7 +428,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
         'Company 3',
         candidate.employmentDetails.previousCompany3,
         'Designation / Exp',
-        `${candidate.employmentDetails.previousDesignation3 || 'N/A'} (${candidate.employmentDetails.yearsOfExperience3 || 0} Yrs)`,
+        `${candidate.employmentDetails.previousDesignation3 || 'NIL'} (${candidate.employmentDetails.yearsOfExperience3 || 0} Yrs)`,
         currentY,
         { label1Width: 92, label2Width: 80 }
       );
@@ -421,12 +449,12 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   );
 
   if (candidate.employmentDetails?.previouslyWorkedHere && candidate.employmentDetails?.joinDesignation) {
-    const rolesLine = `Join: ${candidate.employmentDetails.joinDesignation || 'N/A'} | Relieve: ${candidate.employmentDetails.relievingDesignation || 'N/A'}`;
+    const rolesLine = `Join: ${candidate.employmentDetails.joinDesignation || 'NIL'} | Relieve: ${candidate.employmentDetails.relievingDesignation || 'NIL'}`;
     currentY = drawAlignedRow(
       'Rupeeapex Roles',
       rolesLine,
       'Relieving Reason',
-      candidate.employmentDetails.reasonForRelieving || 'N/A',
+      candidate.employmentDetails.reasonForRelieving || 'NIL',
       currentY,
       { label1Width: 92, label2Width: 80 }
     );
@@ -442,7 +470,7 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Preferred Job Role',
     roleDisplay,
     candidate.preferredJobRole === 'OTHER' ? 'Custom Specified Role' : '',
-    candidate.preferredJobRole === 'OTHER' ? (candidate.preferredJobRoleOther || 'N/A') : '',
+    candidate.preferredJobRole === 'OTHER' ? (candidate.preferredJobRoleOther || 'NIL') : '',
     currentY,
     { label1Width: 92, label2Width: 90 }
   );
@@ -454,12 +482,12 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     'Referral Source',
     candidate.referenceDetails.referralSource,
     'Reference Name',
-    `${candidate.referenceDetails.referrerName || 'N/A'} ${candidate.referenceDetails.referrerContact ? `(${candidate.referenceDetails.referrerContact})` : ''}`,
+    `${candidate.referenceDetails.referrerName || 'NIL'} ${candidate.referenceDetails.referrerContact ? `(${candidate.referenceDetails.referrerContact})` : ''}`,
     currentY,
     { label1Width: 88, label2Width: 80 }
   );
   if (candidate.referenceDetails.additionalRemarks) {
-    page.drawText('Additional Remarks: ' + candidate.referenceDetails.additionalRemarks.substring(0, 95), {
+    page.drawText('Additional Remarks: ' + formatNil(candidate.referenceDetails.additionalRemarks).substring(0, 95), {
       x: leftMargin + 6,
       y: currentY,
       size: 7.2,
@@ -482,13 +510,10 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   currentY -= 16;
 
   // Signature row
-  const submittedDateStr = new Date(candidate.submittedAt).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const appTime = formatIndianTime(candidate.submittedAt);
+  const appDate = formatIndianDate(candidate.submittedAt);
 
-  page.drawText(`Date: ${submittedDateStr}`, {
+  page.drawText(`Application Time: ${appTime}`, {
     x: leftMargin + 6,
     y: currentY,
     size: 7.8,
@@ -496,15 +521,23 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     color: darkText,
   });
 
-  page.drawText('Candidate Signature: ________________________________', {
-    x: width - rightMargin - 240,
-    y: currentY,
+  page.drawText(`Application Date: ${appDate}`, {
+    x: leftMargin + 6,
+    y: currentY - 11,
     size: 7.8,
     font: fontBold,
     color: darkText,
   });
 
-  currentY -= 12;
+  page.drawText('Candidate Signature: ________________________________', {
+    x: width - rightMargin - 240,
+    y: currentY - 4,
+    size: 7.8,
+    font: fontBold,
+    color: darkText,
+  });
+
+  currentY -= 20;
 
   page.drawLine({
     start: { x: leftMargin, y: currentY },

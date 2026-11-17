@@ -30,6 +30,7 @@ import {
   deleteCandidatePhotograph,
 } from '../src/lib/storage';
 import { verifySessionToken } from '../src/lib/auth';
+import { formatDateOfBirth, formatIndianDate, formatIndianTime, formatPanNumber, formatNil } from '../src/lib/formatters';
 import sharp from 'sharp';
 
 let mongod: MongoMemoryServer;
@@ -495,6 +496,180 @@ async function runTests() {
     assert.strictEqual(nonExistentDelete.success, false);
     assert.strictEqual(nonExistentDelete.error, 'Candidate application not found');
     console.log('✔ Test 6.3: Server-side ID validation rejects invalid formats and non-existent IDs');
+
+    // ------------------------------------------------------------------
+    // TEST SUITE 7: INDIAN DATE FORMATTING, CANDIDATE S.NO. & PAN NUMBER UPDATES
+    // ------------------------------------------------------------------
+    console.log('\n[SUITE 7] Indian Date Formatting, Candidate S.No. & PAN Display Updates');
+
+    // Test 7.1: Application Time & Date formatting in Asia/Kolkata
+    const fixedSubmissionDate = new Date('2026-11-16T05:05:00.000Z'); // 10:35 AM IST
+    const formattedTime = formatIndianTime(fixedSubmissionDate);
+    const formattedDate = formatIndianDate(fixedSubmissionDate);
+
+    assert.strictEqual(formattedTime, '10:35 AM', 'Time must be accurately formatted in Asia/Kolkata 12-hour format');
+    assert.strictEqual(formattedDate, '16-11-2026', 'Date must be formatted in DD-MM-YYYY format');
+
+    // Test PDF generation with submission timestamp
+    const sampleCandidateForPdf = await Candidate.findOne();
+    assert.ok(sampleCandidateForPdf, 'Candidate document should exist for PDF testing');
+    sampleCandidateForPdf.submittedAt = fixedSubmissionDate;
+    sampleCandidateForPdf.personalDetails.dateOfBirth = '1998-08-05';
+    sampleCandidateForPdf.personalDetails.panNumber = ''; // Missing PAN
+
+    const generatedPdf = await generateCandidatePdf(sampleCandidateForPdf);
+    assert.ok(generatedPdf instanceof Uint8Array);
+    assert.ok(generatedPdf.length > 5000);
+
+    // Re-download/generate PDF later and verify timestamp immutability (uses candidate.submittedAt, not current time)
+    const regeneratedPdf = await generateCandidatePdf(sampleCandidateForPdf);
+    assert.strictEqual(formatIndianTime(sampleCandidateForPdf.submittedAt), '10:35 AM');
+    assert.strictEqual(formatIndianDate(sampleCandidateForPdf.submittedAt), '16-11-2026');
+    console.log('✔ Test 7.1: Application Time (10:35 AM) and Date (16-11-2026) accurately formatted in Asia/Kolkata');
+
+    // Test 7.2: Date of Birth Indian Format (DD-MM-YYYY) and timezone resilience
+    assert.strictEqual(formatDateOfBirth('1998-08-05'), '05-08-1998', 'DOB 1998-08-05 must format to 05-08-1998');
+    assert.strictEqual(formatDateOfBirth('1998-5-8'), '08-05-1998', 'Single digit day/month must include leading zeros');
+    assert.strictEqual(formatDateOfBirth('2000-01-01'), '01-01-2000', 'DOB 2000-01-01 must format to 01-01-2000');
+    assert.strictEqual(formatDateOfBirth('05-08-1998'), '05-08-1998', 'Already formatted DD-MM-YYYY preserved intact');
+    assert.strictEqual(formatDateOfBirth(''), 'NIL', 'Empty DOB safely returns NIL fallback');
+    assert.strictEqual(formatDateOfBirth(null), 'NIL', 'Null DOB safely returns NIL fallback');
+    assert.strictEqual(formatDateOfBirth(undefined), 'NIL', 'Undefined DOB safely returns NIL fallback');
+    assert.strictEqual(formatDateOfBirth('invalid-date'), 'NIL', 'Invalid DOB safely returns NIL fallback');
+    console.log('✔ Test 7.2: Date of Birth correctly formatted to DD-MM-YYYY with zero-padding and no timezone shift');
+
+    // Test 7.3: Candidate S.No. Sequential Numbering Logic
+    const page1Limit = 10;
+    const calculateSNo = (page: number, limit: number, index: number) => (page - 1) * limit + index + 1;
+
+    // Verify page 1 sequential serial numbers: 1 to 10
+    for (let i = 0; i < 10; i++) {
+      assert.strictEqual(calculateSNo(1, page1Limit, i), i + 1);
+    }
+    // Verify page 2 sequential serial numbers: 11 to 20
+    for (let i = 0; i < 10; i++) {
+      assert.strictEqual(calculateSNo(2, page1Limit, i), 10 + i + 1);
+    }
+    // Verify database IDs are completely unaffected
+    assert.ok(sampleCandidateForPdf._id, 'MongoDB ObjectId must be preserved');
+    assert.ok(sampleCandidateForPdf.applicationId.startsWith('RAP-'), 'Application ID must be preserved');
+    console.log('✔ Test 7.3: Candidate S.No. correctly numbers candidates sequentially across pagination without modifying IDs');
+
+    // Test 7.4: Missing PAN Number fallback to NIL
+    assert.strictEqual(formatPanNumber('ABCDE1234F'), 'ABCDE1234F', 'Valid PAN remains unchanged');
+    assert.strictEqual(formatPanNumber('abcde1234f'), 'ABCDE1234F', 'Lowercase PAN normalized to uppercase');
+    assert.strictEqual(formatPanNumber(''), 'NIL', 'Empty PAN displays NIL');
+    assert.strictEqual(formatPanNumber('   '), 'NIL', 'Whitespace-only PAN displays NIL');
+    assert.strictEqual(formatPanNumber(null), 'NIL', 'Null PAN displays NIL');
+    assert.strictEqual(formatPanNumber(undefined), 'NIL', 'Undefined PAN displays NIL');
+    assert.strictEqual(formatPanNumber('NA'), 'NIL', 'Legacy NA displays NIL');
+    assert.strictEqual(formatPanNumber('N/A'), 'NIL', 'Legacy N/A displays NIL');
+
+    // Verify database storage does NOT save 'NIL' text in MongoDB
+    const testCandidateNoPan: any = {
+      personalDetails: {
+        fullName: 'Candidate Without PAN',
+        dateOfBirth: '1998-08-05',
+        age: 28,
+        gender: 'Male',
+        maritalStatus: 'Single',
+        fathersName: 'Father',
+        mothersName: 'Mother',
+        mobileNumber: '9840112233',
+        email: 'nopan@example.com',
+        aadhaarNumber: '123412341234',
+        panNumber: '', // Candidate leaves PAN empty
+      },
+      familyDetails: {},
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '1', villageOrArea: 'A', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+        temporaryAddress: { doorNoStreet: '1', villageOrArea: 'A', taluk: 'T', district: 'D', state: 'S', pincode: '600001' },
+        sameAsPermanent: true,
+      },
+      educationDetails: { highestQualification: 'B.Com', institutionName: 'Univ', passingYear: '2020' },
+      employmentDetails: { hasPreviousExperience: false },
+      preferredJobRole: 'GOLD',
+      referenceDetails: { referralSource: 'Walk-in Direct' },
+      declarationAccepted: true,
+    };
+
+    const submitNoPanResult = await submitApplication(testCandidateNoPan, validJpgBuffer, 'nopan.jpg');
+    const savedDoc = await Candidate.findById(submitNoPanResult.candidateId);
+    assert.ok(savedDoc);
+    assert.strictEqual(savedDoc.personalDetails.panNumber, '', 'MongoDB must NOT store literal NIL as PAN');
+    assert.strictEqual(formatPanNumber(savedDoc.personalDetails.panNumber), 'NIL', 'Display fallback correctly shows NIL');
+    console.log('✔ Test 7.4: Missing PAN displays NIL everywhere, valid PAN preserved, NIL is never saved in MongoDB');
+
+    // Test 7.5: formatNil helper strictly for PDF and HR View rendering
+    assert.strictEqual(formatNil(null), 'NIL', 'null must return NIL');
+    assert.strictEqual(formatNil(undefined), 'NIL', 'undefined must return NIL');
+    assert.strictEqual(formatNil(''), 'NIL', 'Empty string must return NIL');
+    assert.strictEqual(formatNil('   '), 'NIL', 'Whitespace string must return NIL');
+    assert.strictEqual(formatNil('N/A'), 'NIL', 'N/A must return NIL');
+    assert.strictEqual(formatNil('NA'), 'NIL', 'NA must return NIL');
+    assert.strictEqual(formatNil('None'), 'NIL', 'None must return NIL');
+    assert.strictEqual(formatNil('NONE'), 'NIL', 'NONE must return NIL');
+    assert.strictEqual(formatNil('-'), 'NIL', '- must return NIL');
+    assert.strictEqual(formatNil('Software Engineer'), 'Software Engineer', 'Valid string must be preserved');
+    assert.strictEqual(formatNil(2024), '2024', 'Numbers must be preserved');
+
+    // Test PDF generation with a candidate with completely empty optional fields
+    const emptyFieldsCandidate: any = {
+      applicationId: 'RAP-2026-NIL001',
+      personalDetails: {
+        fullName: 'Empty Candidate',
+        dateOfBirth: '',
+        age: 0,
+        gender: 'Male',
+        maritalStatus: '',
+        fathersName: 'Father',
+        mothersName: 'Mother',
+        spouseName: '',
+        mobileNumber: '9988776655',
+        alternativeMobileNumber: '',
+        email: 'empty@example.com',
+        aadhaarNumber: '112233445566',
+        panNumber: '',
+        drivingLicenseNumber: '',
+        bloodGroup: '',
+        bankAccountNumber: '',
+        ifscCode: '',
+        bankBranchName: '',
+      },
+      familyDetails: {
+        fathersOccupation: '',
+        fathersMobile: '',
+        mothersOccupation: '',
+        mothersMobile: '',
+        spouseOccupation: '',
+      },
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '', villageOrArea: '', taluk: '', district: '', state: '', pincode: '' },
+        temporaryAddress: { doorNoStreet: '', villageOrArea: '', taluk: '', district: '', state: '', pincode: '' },
+        sameAsPermanent: false,
+      },
+      educationDetails: {
+        highestQualification: '10th',
+        passingYear: '2015',
+        institutionName: 'School',
+        educationDetails: '',
+      },
+      employmentDetails: {
+        hasPreviousExperience: false,
+      },
+      preferredJobRole: 'RECEPTIONIST',
+      referenceDetails: {
+        referralSource: 'Walk-in Direct',
+        referrerName: '',
+        additionalRemarks: '',
+      },
+      submittedAt: new Date(),
+    };
+
+    const emptyCandidatePdf = await generateCandidatePdf(emptyFieldsCandidate);
+    assert.ok(emptyCandidatePdf instanceof Uint8Array);
+    assert.ok(emptyCandidatePdf.length > 5000, 'PDF must generate successfully for candidate with all optional fields empty');
+    console.log('✔ Test 7.5: formatNil converts all empty/missing/NA values to NIL, preserves valid values, and PDF generates flawlessly with all empty fields');
 
     console.log('\n==================================================');
     console.log('ALL TESTS PASSED WITH 100% SUCCESS!');

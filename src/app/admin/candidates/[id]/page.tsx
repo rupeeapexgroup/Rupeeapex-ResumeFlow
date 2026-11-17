@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { APPLICATION_STATUSES } from '@/lib/constants';
+import { formatDateOfBirth, formatPanNumber, formatNil } from '@/lib/formatters';
 import {
   ArrowLeft,
   Download,
@@ -330,77 +331,76 @@ export default function CandidateDetailPage() {
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div>
                   <dt className="text-slate-400">Candidate Name</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.fullName}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.fullName)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Gender</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.gender}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.gender)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Date of Birth</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.personalDetails.dateOfBirth} ({candidate.personalDetails.age} yrs)
+                    {formatDateOfBirth(candidate.personalDetails?.dateOfBirth)}
+                    {candidate.personalDetails?.age ? ` (${candidate.personalDetails.age} yrs)` : ''}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Marital Status</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.maritalStatus}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.maritalStatus)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Father&apos;s Name</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.fathersName}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.fathersName)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Mother&apos;s Name</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.mothersName}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.mothersName)}</dd>
                 </div>
-                {candidate.personalDetails.spouseName && (
-                  <div>
-                    <dt className="text-slate-400">Spouse Name</dt>
-                    <dd className="font-semibold text-slate-900">{candidate.personalDetails.spouseName}</dd>
-                  </div>
-                )}
+                <div>
+                  <dt className="text-slate-400">Spouse Name</dt>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.spouseName)}</dd>
+                </div>
                 <div>
                   <dt className="text-slate-400">Mobile Number</dt>
-                  <dd className="font-semibold text-[#006B3C]">{candidate.personalDetails.mobileNumber}</dd>
+                  <dd className="font-semibold text-[#006B3C]">{formatNil(candidate.personalDetails?.mobileNumber)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Alt Mobile</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.personalDetails.alternativeMobileNumber || 'N/A'}
+                    {formatNil(candidate.personalDetails?.alternativeMobileNumber)}
                   </dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-slate-400">Email Address</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.email}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.email)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Aadhaar Number</dt>
-                  <dd className="font-mono font-semibold text-slate-900">{candidate.personalDetails.aadhaarNumber}</dd>
+                  <dd className="font-mono font-semibold text-slate-900">{formatNil(candidate.personalDetails?.aadhaarNumber)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">PAN Number</dt>
-                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.panNumber || 'N/A'}</dd>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{formatPanNumber(candidate.personalDetails?.panNumber)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Driving License No</dt>
-                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.drivingLicenseNumber || 'N/A'}</dd>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{formatNil(candidate.personalDetails?.drivingLicenseNumber)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Blood Group</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.bloodGroup || 'N/A'}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.bloodGroup)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Bank Account No</dt>
-                  <dd className="font-mono font-semibold text-slate-900">{candidate.personalDetails.bankAccountNumber || 'N/A'}</dd>
+                  <dd className="font-mono font-semibold text-slate-900">{formatNil(candidate.personalDetails?.bankAccountNumber)}</dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">IFSC Code</dt>
-                  <dd className="font-mono font-semibold uppercase text-slate-900">{candidate.personalDetails.ifscCode || 'N/A'}</dd>
+                  <dd className="font-mono font-semibold uppercase text-slate-900">{formatNil(candidate.personalDetails?.ifscCode)}</dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-slate-400">Bank & Branch Name</dt>
-                  <dd className="font-semibold text-slate-900">{candidate.personalDetails.bankBranchName || 'N/A'}</dd>
+                  <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.bankBranchName)}</dd>
                 </div>
               </dl>
             </div>
@@ -415,35 +415,33 @@ export default function CandidateDetailPage() {
                 <div>
                   <dt className="text-slate-400">Father&apos;s Occupation</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.familyDetails?.fathersOccupation || 'N/A'}
+                    {formatNil(candidate.familyDetails?.fathersOccupation)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Father&apos;s Mobile</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.familyDetails?.fathersMobile || 'N/A'}
+                    {formatNil(candidate.familyDetails?.fathersMobile)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Mother&apos;s Occupation</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.familyDetails?.mothersOccupation || 'N/A'}
+                    {formatNil(candidate.familyDetails?.mothersOccupation)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Mother&apos;s Mobile</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.familyDetails?.mothersMobile || 'N/A'}
+                    {formatNil(candidate.familyDetails?.mothersMobile)}
                   </dd>
                 </div>
-                {candidate.familyDetails?.spouseOccupation && (
-                  <div>
-                    <dt className="text-slate-400">Spouse Occupation</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {candidate.familyDetails.spouseOccupation}
-                    </dd>
-                  </div>
-                )}
+                <div>
+                  <dt className="text-slate-400">Spouse Occupation</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {formatNil(candidate.familyDetails?.spouseOccupation)}
+                  </dd>
+                </div>
               </dl>
             </div>
 
@@ -457,29 +455,27 @@ export default function CandidateDetailPage() {
                 <div>
                   <dt className="text-slate-400">Highest Qualification</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.educationDetails.highestQualification}
+                    {formatNil(candidate.educationDetails?.highestQualification)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-slate-400">Year of Passing</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.educationDetails.passingYear}
+                    {formatNil(candidate.educationDetails?.passingYear)}
                   </dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-slate-400">Institution Name</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.educationDetails.institutionName}
+                    {formatNil(candidate.educationDetails?.institutionName)}
                   </dd>
                 </div>
-                {candidate.educationDetails.educationDetails && (
-                  <div className="col-span-2">
-                    <dt className="text-slate-400">Education Details / Specialization</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {candidate.educationDetails.educationDetails}
-                    </dd>
-                  </div>
-                )}
+                <div className="col-span-2">
+                  <dt className="text-slate-400">Education Details / Specialization</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {formatNil(candidate.educationDetails?.educationDetails)}
+                  </dd>
+                </div>
               </dl>
             </div>
 
@@ -493,7 +489,7 @@ export default function CandidateDetailPage() {
                 <div>
                   <dt className="text-slate-400">Experience Status</dt>
                   <dd className="font-semibold text-slate-900">
-                    {candidate.employmentDetails.hasPreviousExperience ? 'Experienced' : 'Fresher'}
+                    {candidate.employmentDetails?.hasPreviousExperience ? 'Experienced' : 'Fresher'}
                   </dd>
                 </div>
                 <div>
@@ -508,51 +504,62 @@ export default function CandidateDetailPage() {
                 </div>
                 {candidate.employmentDetails?.previouslyWorkedHere && (
                   <>
-                    {candidate.employmentDetails.previousEmployeeId && (
-                      <div>
-                        <dt className="text-slate-400">Rupeeapex Employee ID</dt>
-                        <dd className="font-semibold text-slate-900">{candidate.employmentDetails.previousEmployeeId}</dd>
-                      </div>
-                    )}
+                    <div>
+                      <dt className="text-slate-400">Rupeeapex Employee ID</dt>
+                      <dd className="font-semibold text-slate-900">{formatNil(candidate.employmentDetails?.previousEmployeeId)}</dd>
+                    </div>
                     <div>
                       <dt className="text-slate-400">Rupeeapex Joining Designation</dt>
-                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.joinDesignation || 'N/A'}</dd>
+                      <dd className="font-semibold text-slate-900">{formatNil(candidate.employmentDetails?.joinDesignation)}</dd>
                     </div>
                     <div>
                       <dt className="text-slate-400">Rupeeapex Relieving Designation</dt>
-                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.relievingDesignation || 'N/A'}</dd>
+                      <dd className="font-semibold text-slate-900">{formatNil(candidate.employmentDetails?.relievingDesignation)}</dd>
                     </div>
-                    {candidate.employmentDetails.dateOfRelieving && (
-                      <div>
-                        <dt className="text-slate-400">Date of Relieving</dt>
-                        <dd className="font-semibold text-slate-900">{candidate.employmentDetails.dateOfRelieving}</dd>
-                      </div>
-                    )}
+                    <div>
+                      <dt className="text-slate-400">Date of Relieving</dt>
+                      <dd className="font-semibold text-slate-900">{formatNil(candidate.employmentDetails?.dateOfRelieving)}</dd>
+                    </div>
                     <div className="col-span-2">
                       <dt className="text-slate-400">Reason for Relieving</dt>
-                      <dd className="font-semibold text-slate-900">{candidate.employmentDetails.reasonForRelieving || 'N/A'}</dd>
+                      <dd className="font-semibold text-slate-900">{formatNil(candidate.employmentDetails?.reasonForRelieving)}</dd>
                     </div>
                   </>
                 )}
-                {candidate.employmentDetails.hasPreviousExperience && (
+                {candidate.employmentDetails?.hasPreviousExperience ? (
                   <>
                     <div>
                       <dt className="text-slate-400">Years of Experience</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.yearsOfExperience || candidate.employmentDetails.experienceDurationYears || 0} Years
+                        {formatNil(candidate.employmentDetails?.yearsOfExperience || candidate.employmentDetails?.experienceDurationYears)} Years
                       </dd>
                     </div>
                     <div>
                       <dt className="text-slate-400">Previous Company</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.previousCompany || candidate.employmentDetails.previousCompanyName || 'N/A'}
+                        {formatNil(candidate.employmentDetails?.previousCompany || candidate.employmentDetails?.previousCompanyName)}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-slate-400">Previous Designation</dt>
                       <dd className="font-semibold text-slate-900">
-                        {candidate.employmentDetails.previousDesignation || candidate.employmentDetails.previousOccupation || 'N/A'}
+                        {formatNil(candidate.employmentDetails?.previousDesignation || candidate.employmentDetails?.previousOccupation)}
                       </dd>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <dt className="text-slate-400">Years of Experience</dt>
+                      <dd className="font-semibold text-slate-900">NIL</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-400">Previous Company</dt>
+                      <dd className="font-semibold text-slate-900">NIL</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-400">Previous Designation</dt>
+                      <dd className="font-semibold text-slate-900">NIL</dd>
                     </div>
                   </>
                 )}
@@ -569,12 +576,12 @@ export default function CandidateDetailPage() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <dt className="text-slate-400">Selected Role</dt>
-                <dd className="font-bold text-slate-900 text-sm">{roleDisplay}</dd>
+                <dd className="font-bold text-slate-900 text-sm">{formatNil(roleDisplay)}</dd>
               </div>
-              {candidate.preferredJobRole === 'OTHER' && candidate.preferredJobRoleOther && (
+              {candidate.preferredJobRole === 'OTHER' && (
                 <div>
                   <dt className="text-slate-400">Specified Custom Role</dt>
-                  <dd className="font-semibold text-amber-800 text-sm">{candidate.preferredJobRoleOther}</dd>
+                  <dd className="font-semibold text-amber-800 text-sm">{formatNil(candidate.preferredJobRoleOther)}</dd>
                 </div>
               )}
             </dl>
@@ -590,19 +597,19 @@ export default function CandidateDetailPage() {
               <div>
                 <dt className="text-slate-400">How did you come to know about this job?</dt>
                 <dd className="font-semibold text-slate-900">
-                  {candidate.referenceDetails.referralSource}
+                  {formatNil(candidate.referenceDetails?.referralSource)}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-400">Reference Name</dt>
                 <dd className="font-semibold text-slate-900">
-                  {candidate.referenceDetails.referrerName || 'N/A'}
+                  {formatNil(candidate.referenceDetails?.referrerName)}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-400">Additional Relevant Details</dt>
                 <dd className="font-semibold text-slate-900">
-                  {candidate.referenceDetails.additionalRemarks || 'None'}
+                  {formatNil(candidate.referenceDetails?.additionalRemarks)}
                 </dd>
               </div>
             </dl>
@@ -618,14 +625,20 @@ export default function CandidateDetailPage() {
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="font-bold text-slate-700 block mb-1">Permanent Address:</span>
                 <p className="text-slate-800 leading-relaxed">
-                  {candidate.addressDetails.permanentAddress.doorNoStreet},{' '}
-                  {candidate.addressDetails.permanentAddress.villageOrArea},{' '}
-                  {candidate.addressDetails.permanentAddress.taluk},{' '}
-                  {candidate.addressDetails.permanentAddress.district},{' '}
-                  {candidate.addressDetails.permanentAddress.state} -{' '}
-                  <span className="font-semibold font-mono">
-                    {candidate.addressDetails.permanentAddress.pincode}
-                  </span>
+                  {candidate.addressDetails?.permanentAddress ? (
+                    <>
+                      {formatNil(candidate.addressDetails.permanentAddress.doorNoStreet)},{' '}
+                      {formatNil(candidate.addressDetails.permanentAddress.villageOrArea)},{' '}
+                      {formatNil(candidate.addressDetails.permanentAddress.taluk)},{' '}
+                      {formatNil(candidate.addressDetails.permanentAddress.district)},{' '}
+                      {formatNil(candidate.addressDetails.permanentAddress.state)} -{' '}
+                      <span className="font-semibold font-mono">
+                        {formatNil(candidate.addressDetails.permanentAddress.pincode)}
+                      </span>
+                    </>
+                  ) : (
+                    'NIL'
+                  )}
                 </p>
               </div>
 
@@ -634,9 +647,22 @@ export default function CandidateDetailPage() {
                   Temporary / Present Address:
                 </span>
                 <p className="text-slate-800 leading-relaxed">
-                  {candidate.addressDetails.sameAsPermanent
+                  {candidate.addressDetails?.sameAsPermanent
                     ? 'Same as Permanent Address'
-                    : `${candidate.addressDetails.temporaryAddress.doorNoStreet}, ${candidate.addressDetails.temporaryAddress.villageOrArea}, ${candidate.addressDetails.temporaryAddress.taluk}, ${candidate.addressDetails.temporaryAddress.district}, ${candidate.addressDetails.temporaryAddress.state} - ${candidate.addressDetails.temporaryAddress.pincode}`}
+                    : candidate.addressDetails?.temporaryAddress
+                    ? (
+                      <>
+                        {formatNil(candidate.addressDetails.temporaryAddress.doorNoStreet)},{' '}
+                        {formatNil(candidate.addressDetails.temporaryAddress.villageOrArea)},{' '}
+                        {formatNil(candidate.addressDetails.temporaryAddress.taluk)},{' '}
+                        {formatNil(candidate.addressDetails.temporaryAddress.district)},{' '}
+                        {formatNil(candidate.addressDetails.temporaryAddress.state)} -{' '}
+                        <span className="font-semibold font-mono">
+                          {formatNil(candidate.addressDetails.temporaryAddress.pincode)}
+                        </span>
+                      </>
+                    )
+                    : 'NIL'}
                 </p>
               </div>
             </div>

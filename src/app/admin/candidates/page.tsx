@@ -453,6 +453,7 @@ export default function AdminCandidatesPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold">
                   <tr>
+                    <th className="px-4 py-3.5">Candidate S.No.</th>
                     <th className="px-4 py-3.5">Application ID</th>
                     <th className="px-4 py-3.5">Candidate Name</th>
                     <th className="px-4 py-3.5">Mobile Number</th>
@@ -466,7 +467,7 @@ export default function AdminCandidatesPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
                         <div className="inline-flex items-center gap-2">
                           <RefreshCw className="w-4 h-4 animate-spin text-[#006B3C]" />
                           <span>Loading candidate applications...</span>
@@ -475,12 +476,12 @@ export default function AdminCandidatesPage() {
                     </tr>
                   ) : candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                      <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
                         No candidate applications found matching your criteria.
                       </td>
                     </tr>
                   ) : (
-                    candidates.map((candidate) => {
+                    candidates.map((candidate, index) => {
                       const roleDisplay = candidate.preferredJobRole === 'OTHER' && candidate.preferredJobRoleOther
                         ? `OTHER (${candidate.preferredJobRoleOther})`
                         : candidate.preferredJobRole;
@@ -491,6 +492,11 @@ export default function AdminCandidatesPage() {
 
                       return (
                         <tr key={candidate._id} className="hover:bg-slate-50 transition-colors">
+                          {/* S.No. */}
+                          <td className="px-4 py-3.5 font-medium text-slate-500 whitespace-nowrap">
+                            {(pagination.page - 1) * pagination.limit + index + 1}
+                          </td>
+
                           {/* ID */}
                           <td className="px-4 py-3.5 font-mono font-bold text-[#006B3C]">
                             <Link

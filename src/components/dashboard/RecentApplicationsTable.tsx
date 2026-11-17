@@ -80,6 +80,7 @@ export function RecentApplicationsTable({ initialCandidates }: RecentApplication
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold">
             <tr>
+              <th className="px-5 py-3.5">Candidate S.No.</th>
               <th className="px-5 py-3.5">Application ID</th>
               <th className="px-5 py-3.5">Candidate Name</th>
               <th className="px-5 py-3.5">Mobile Number</th>
@@ -93,12 +94,12 @@ export function RecentApplicationsTable({ initialCandidates }: RecentApplication
           <tbody className="divide-y divide-slate-100">
             {candidates.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-8 text-center text-slate-500">
+                <td colSpan={9} className="px-5 py-8 text-center text-slate-500">
                   No candidate applications submitted yet.
                 </td>
               </tr>
             ) : (
-              candidates.map((c: any) => {
+              candidates.map((c: any, index: number) => {
                 const roleDisplay =
                   c.preferredJobRole === 'OTHER' && c.preferredJobRoleOther
                     ? `OTHER (${c.preferredJobRoleOther})`
@@ -110,6 +111,10 @@ export function RecentApplicationsTable({ initialCandidates }: RecentApplication
 
                 return (
                   <tr key={c._id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-slate-500 whitespace-nowrap">
+                      {index + 1}
+                    </td>
+
                     <td className="px-5 py-3.5 font-mono font-bold text-[#006B3C]">
                       <Link href={`/admin/candidates/${c._id}`} className="hover:underline">
                         {c.applicationId}
