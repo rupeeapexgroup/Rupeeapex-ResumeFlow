@@ -273,3 +273,215 @@ export async function deleteCandidatePhotograph(storageKey: string): Promise<boo
   }
 }
 
+/**
+ * Validates resume file buffer and extension to strictly permit only genuine PDF, DOC, and DOCX documents
+ */
+export function validateResumeMagicBytes(
+  buffer: Buffer,
+  originalFilename: string = ''
+): { isValid: boolean; mimeType: string; format: 'pdf' | 'doc' | 'docx' | '' } {
+  if (!buffer || buffer.length < 4) {
+    return { isValid: false, mimeType: '', format: '' };
+  }
+
+  const ext = path.extname(originalFilename || '').toLowerCase();
+
+  // 1. PDF format: starts with '%PDF' (0x25, 0x50, 0x44, 0x46) or within first 1024 bytes
+  const isPdfMagic =
+    (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) ||
+    buffer.slice(0, 1024).includes(Buffer.from('%PDF-'));
+
+  if (isPdfMagic && (ext === '.pdf' || !ext)) {
+    return { isValid: true, mimeType: 'application/pdf', format: 'pdf' };
+  }
+
+  // 2. DOC format (OLE2 Compound Document): D0 CF 11 E0 A1 B1 1A E1
+  const isDocMagic =
+    buffer.length >= 8 &&
+    buffer[0] === 0xd0 &&
+    buffer[1] === 0xcf &&
+    buffer[2] === 0x11 &&
+    buffer[3] === 0xe0 &&
+    buffer[4] === 0xa1 &&
+    buffer[5] === 0xb1 &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0xe1;
+
+  if (isDocMagic && (ext === '.doc' || !ext)) {
+    return { isValid: true, mimeType: 'application/msword', format: 'doc' };
+  }
+
+  // 3. DOCX format (ZIP archive format containing Word documents): PK 03 04 / PK 05 06 / PK 07 08
+  const isZipMagic =
+    buffer[0] === 0x50 &&
+    buffer[1] === 0x4b &&
+    (buffer[2] === 0x03 || buffer[2] === 0x05 || buffer[2] === 0x07) &&
+    (buffer[3] === 0x04 || buffer[3] === 0x06 || buffer[3] === 0x08);
+
+  if (isZipMagic && (ext === '.docx' || !ext)) {
+    return {
+      isValid: true,
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      format: 'docx',
+    };
+  }
+
+  return { isValid: false, mimeType: '', format: '' };
+}
+
+/**
+ * Stores a candidate resume in Cloudinary (or local private storage as fallback)
+ * Validates maximum 5 MB file size and strict PDF/DOC/DOCX content
+ */
+export async function saveCandidateResume(
+  fileBuffer: Buffer,
+  originalFilename: string
+): Promise<{ storageKey: string; fileName: string; mimeType: string; size: number }> {
+  if (fileBuffer.length > MAX_FILE_SIZE) {
+    throw new Error('Resume size exceeds the maximum allowed limit of 5 MB. Please select a file smaller than or equal to 5 MB.');
+  }
+
+  const { isValid, mimeType, format } = validateResumeMagicBytes(fileBuffer, originalFilename);
+  if (!isValid) {
+    throw new Error('Invalid resume format. Only genuine PDF, DOC, and DOCX documents are permitted.');
+  }
+
+  const safeOriginalName = path.basename(originalFilename || `resume.${format || 'pdf'}`);
+
+  // 1. If Cloudinary is configured, upload raw file directly to Cloudinary
+  if (isCloudinaryConfigured()) {
+    try {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'resumeflow/candidate_resumes',
+            resource_type: 'raw',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        uploadStream.end(fileBuffer);
+      });
+
+      return {
+        storageKey: uploadResult.secure_url || uploadResult.url,
+        fileName: safeOriginalName,
+        mimeType,
+        size: fileBuffer.length,
+      };
+    } catch (uploadError) {
+      console.error('Cloudinary resume upload error, falling back to local disk storage:', uploadError);
+    }
+  }
+
+  // 2. Fallback / default: local disk storage
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+
+  const ext = path.extname(safeOriginalName).toLowerCase() || `.${format || 'pdf'}`;
+  const randomHex = crypto.randomBytes(16).toString('hex');
+  const filename = `resume_${Date.now()}_${randomHex}${ext}`;
+  const fullPath = path.join(UPLOAD_DIR, filename);
+
+  await fs.writeFile(fullPath, fileBuffer);
+
+  return {
+    storageKey: filename,
+    fileName: safeOriginalName,
+    mimeType,
+    size: fileBuffer.length,
+  };
+}
+
+/**
+ * Retrieves a candidate resume file buffer from Cloudinary or local private storage
+ */
+export async function getCandidateResume(
+  storageKey: string,
+  fallbackMimeType?: string
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  if (!storageKey) return null;
+
+  // 1. If remote Cloudinary URL
+  if (storageKey.startsWith('http://') || storageKey.startsWith('https://')) {
+    try {
+      const response = await fetch(storageKey);
+      if (!response.ok) return null;
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const mime = fallbackMimeType || response.headers.get('content-type') || 'application/pdf';
+      return { buffer, mimeType: mime };
+    } catch (err) {
+      console.error('Failed to fetch resume from Cloudinary URL:', err);
+      return null;
+    }
+  }
+
+  // 2. Local storage
+  const safeFilename = path.basename(storageKey);
+  const fullPath = path.join(UPLOAD_DIR, safeFilename);
+
+  try {
+    const buffer = await fs.readFile(fullPath);
+    let mime = fallbackMimeType;
+    if (!mime) {
+      if (safeFilename.endsWith('.pdf')) mime = 'application/pdf';
+      else if (safeFilename.endsWith('.docx')) mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      else if (safeFilename.endsWith('.doc')) mime = 'application/msword';
+      else mime = 'application/octet-stream';
+    }
+    return { buffer, mimeType: mime };
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Permanently deletes candidate resume from storage (local disk or Cloudinary)
+ */
+export async function deleteCandidateResume(storageKey: string): Promise<boolean> {
+  if (!storageKey) return false;
+
+  try {
+    // 1. If remote Cloudinary URL
+    if (storageKey.startsWith('http://') || storageKey.startsWith('https://')) {
+      if (isCloudinaryConfigured()) {
+        try {
+          const urlParts = storageKey.split('/');
+          const uploadIndex = urlParts.indexOf('upload');
+          if (uploadIndex !== -1) {
+            const publicIdWithExt = urlParts.slice(uploadIndex + 2).join('/');
+            if (publicIdWithExt) {
+              await cloudinary.uploader.destroy(publicIdWithExt, { resource_type: 'raw' });
+              return true;
+            }
+          }
+        } catch (cErr) {
+          console.warn('Cloudinary resume delete warning:', cErr);
+        }
+      }
+      return false;
+    }
+
+    // 2. Local storage
+    const safeFilename = path.basename(storageKey);
+    const fullPath = path.join(UPLOAD_DIR, safeFilename);
+
+    try {
+      await fs.unlink(fullPath);
+      return true;
+    } catch (fsErr: any) {
+      if (fsErr.code === 'ENOENT') {
+        return true; // File already gone
+      }
+      console.warn('Error unlinking resume file:', fsErr);
+      return false;
+    }
+  } catch (err) {
+    console.warn('Failed to delete resume:', err);
+    return false;
+  }
+}
+
+

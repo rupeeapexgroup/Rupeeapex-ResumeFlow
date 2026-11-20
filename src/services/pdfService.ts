@@ -486,16 +486,17 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     currentY,
     { label1Width: 88, label2Width: 80 }
   );
-  if (candidate.referenceDetails.additionalRemarks) {
-    page.drawText('Additional Remarks: ' + formatNil(candidate.referenceDetails.additionalRemarks).substring(0, 95), {
-      x: leftMargin + 6,
-      y: currentY,
-      size: 7.2,
-      font: fontRegular,
-      color: darkText,
-    });
-    currentY -= 12;
-  }
+  const resumeRefText = candidate.resumeStorageKey
+    ? (candidate.resumeFileName ? `Attached (${candidate.resumeFileName.substring(0, 24)})` : 'Attached')
+    : 'NIL';
+  currentY = drawAlignedRow(
+    'Resume Document',
+    resumeRefText,
+    'Remarks',
+    candidate.referenceDetails?.additionalRemarks || 'NIL',
+    currentY,
+    { label1Width: 88, label2Width: 80 }
+  );
   currentY -= 4;
 
   // 11. Section 8: Declaration & Signature

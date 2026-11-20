@@ -164,6 +164,22 @@ const CandidateSchema = new Schema<ICandidate>(
     photographMimeType: {
       type: String,
     },
+    resumeStorageKey: {
+      type: String,
+      required: false,
+    },
+    resumeFileName: {
+      type: String,
+      required: false,
+    },
+    resumeMimeType: {
+      type: String,
+      required: false,
+    },
+    resumeFileSize: {
+      type: Number,
+      required: false,
+    },
     applicationStatus: {
       type: String,
       enum: ['NEW', 'UNDER_REVIEW', 'SHORTLISTED', 'REJECTED', 'SELECTED'],

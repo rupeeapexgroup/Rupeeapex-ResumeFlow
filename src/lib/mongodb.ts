@@ -24,6 +24,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 5000, // 5s timeout instead of 30s default hang
     };
 
     const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/resumeflow';

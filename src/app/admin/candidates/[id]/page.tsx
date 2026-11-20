@@ -9,6 +9,7 @@ import { formatDateOfBirth, formatPanNumber, formatNil } from '@/lib/formatters'
 import {
   ArrowLeft,
   Download,
+  Eye,
   Calendar,
   Phone,
   Mail,
@@ -213,6 +214,18 @@ export default function CandidateDetailPage() {
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Photo</span>
+              </a>
+            )}
+
+            {candidate.resumeStorageKey && (
+              <a
+                href={`/api/candidates/${candidate._id}/resume?download=true`}
+                download={candidate.resumeFileName || `Candidate_${candidate.applicationId}_Resume.pdf`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-[#006B3C] border border-emerald-200 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                title="Download Candidate Resume"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Resume</span>
               </a>
             )}
 
@@ -666,6 +679,76 @@ export default function CandidateDetailPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Section 8: Candidate Resume / CV */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800">
+                <FileText className="w-4 h-4 text-[#006B3C]" />
+                <span>Candidate Resume / CV</span>
+              </div>
+              {candidate.resumeStorageKey ? (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#006B3C] border border-emerald-200">
+                  Uploaded
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                  Legacy / Not Available
+                </span>
+              )}
+            </div>
+
+            {candidate.resumeStorageKey ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#006B3C] flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 truncate" title={candidate.resumeFileName || 'Resume Document'}>
+                      {candidate.resumeFileName || 'Resume Document'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                      <span>{candidate.resumeMimeType || 'Document'}</span>
+                      {candidate.resumeFileSize && (
+                        <>
+                          <span>•</span>
+                          <span>{(candidate.resumeFileSize / (1024 * 1024)).toFixed(2)} MB</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={`/api/candidates/${candidate._id}/resume`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:border-[#006B3C] hover:text-[#006B3C] text-slate-700 text-xs font-semibold rounded-lg transition-colors shadow-2xs"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Resume</span>
+                  </a>
+                  <a
+                    href={`/api/candidates/${candidate._id}/resume?download=true`}
+                    download={candidate.resumeFileName || `Candidate_${candidate.applicationId}_Resume.pdf`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#006B3C] hover:bg-[#005530] text-white text-xs font-semibold rounded-lg transition-colors shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <span className="text-xs text-slate-500 font-medium">Resume Document:</span>
+                <span className="text-xs font-bold text-slate-600 bg-slate-200/80 px-3 py-1 rounded-md">
+                  NIL
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

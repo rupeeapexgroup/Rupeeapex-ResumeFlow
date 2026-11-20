@@ -21,6 +21,8 @@ import {
   deleteCandidate,
 } from '../src/services/candidateService';
 import { generateCandidatePdf } from '../src/services/pdfService';
+import { exportCandidatesToExcel } from '../src/services/excelService';
+import * as XLSX from 'xlsx';
 import { candidateApplicationSchema } from '../src/lib/validation';
 import {
   validateImageMagicBytes,
@@ -28,6 +30,10 @@ import {
   getCandidatePhotograph,
   normalizeImageOrientation,
   deleteCandidatePhotograph,
+  validateResumeMagicBytes,
+  saveCandidateResume,
+  getCandidateResume,
+  deleteCandidateResume,
 } from '../src/lib/storage';
 import { verifySessionToken } from '../src/lib/auth';
 import { formatDateOfBirth, formatIndianDate, formatIndianTime, formatPanNumber, formatNil } from '../src/lib/formatters';
@@ -670,6 +676,224 @@ async function runTests() {
     assert.ok(emptyCandidatePdf instanceof Uint8Array);
     assert.ok(emptyCandidatePdf.length > 5000, 'PDF must generate successfully for candidate with all optional fields empty');
     console.log('✔ Test 7.5: formatNil converts all empty/missing/NA values to NIL, preserves valid values, and PDF generates flawlessly with all empty fields');
+
+    // ------------------------------------------------------------------
+    // TEST SUITE 8: RESUME UPLOAD ENHANCEMENT (5 MB) & FULL BACKWARD COMPATIBILITY
+    // ------------------------------------------------------------------
+    console.log('\n[SUITE 8] Resume Upload Enhancement & Full Backward Compatibility Tests');
+
+    // 8.1 Format & Magic Bytes Validation
+    const validPdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF');
+    const pdfCheck = validateResumeMagicBytes(validPdfBuffer, 'resume.pdf');
+    assert.strictEqual(pdfCheck.isValid, true);
+    assert.strictEqual(pdfCheck.format, 'pdf');
+    assert.strictEqual(pdfCheck.mimeType, 'application/pdf');
+
+    // Valid DOC format (OLE2 CFB)
+    const validDocBuffer = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0x00, 0x00, 0x00, 0x00]);
+    const docCheck = validateResumeMagicBytes(validDocBuffer, 'profile.doc');
+    assert.strictEqual(docCheck.isValid, true);
+    assert.strictEqual(docCheck.format, 'doc');
+    assert.strictEqual(docCheck.mimeType, 'application/msword');
+
+    // Valid DOCX format (ZIP PK 03 04)
+    const validDocxBuffer = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]);
+    const docxCheck = validateResumeMagicBytes(validDocxBuffer, 'profile.docx');
+    assert.strictEqual(docxCheck.isValid, true);
+    assert.strictEqual(docxCheck.format, 'docx');
+    assert.strictEqual(docxCheck.mimeType, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    // Rejection of unsupported formats
+    const pngDisguisedAsPdf = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    assert.strictEqual(validateResumeMagicBytes(pngDisguisedAsPdf, 'fake.pdf').isValid, false, 'PNG disguised as PDF must be rejected');
+    assert.strictEqual(validateResumeMagicBytes(Buffer.from('Hello world plain text'), 'notes.txt').isValid, false, 'Plain text files must be rejected');
+    assert.strictEqual(validateResumeMagicBytes(validPdfBuffer, 'resume.jpg').isValid, false, 'JPG extension with PDF magic bytes must be rejected');
+    console.log('✔ Test 8.1: File format & magic byte validation strictly enforces PDF, DOC, DOCX and rejects invalid formats');
+
+    // 8.2 Strict 5 MB Size Limit Validation
+    const oversizedBuffer = Buffer.alloc(5 * 1024 * 1024 + 1024, 0x25); // > 5 MB
+    let oversizedErrorThrown = false;
+    try {
+      await saveCandidateResume(oversizedBuffer, 'huge.pdf');
+    } catch (e: any) {
+      oversizedErrorThrown = true;
+      assert.ok(e.message.includes('5 MB'), 'Error message must mention 5 MB limit');
+    }
+    assert.strictEqual(oversizedErrorThrown, true, 'Resume exceeding 5 MB must be strictly rejected');
+    console.log('✔ Test 8.2: Resume files exceeding 5 MB are rejected with clear error');
+
+    // 8.3 Backward Compatibility: Existing Legacy Candidates without resumes
+    // sampleCandidateForPdf was created without a resume in Suite 3
+    const legacyCandidate = await getCandidateById(sampleCandidateForPdf._id);
+    assert.ok(legacyCandidate, 'Legacy candidate must be retrieved successfully');
+    assert.strictEqual(legacyCandidate!.resumeStorageKey, undefined, 'Legacy candidate has undefined resumeStorageKey');
+    assert.strictEqual(formatNil(legacyCandidate!.resumeStorageKey), 'NIL', 'formatNil returns NIL for missing resume');
+
+    // Generate PDF for legacy candidate
+    const legacyCandidatePdf = await generateCandidatePdf(legacyCandidate!);
+    assert.ok(legacyCandidatePdf instanceof Uint8Array, 'PDF must generate successfully for legacy candidates');
+    assert.ok(legacyCandidatePdf.length > 5000);
+    console.log('✔ Test 8.3: Legacy candidates without resumes work normally, format to NIL, and generate PDF with zero errors');
+
+    // 8.4 Submit New Application with Valid PDF Resume (< 5 MB)
+    const newCandidatePdfInput: any = {
+      personalDetails: {
+        fullName: 'Arun Kumar Resume',
+        dateOfBirth: '1997-03-20',
+        age: 29,
+        gender: 'Male',
+        maritalStatus: 'Single',
+        fathersName: 'Father Arun',
+        mothersName: 'Mother Arun',
+        mobileNumber: '9840998877',
+        email: 'arun.resume@example.com',
+        aadhaarNumber: '778899001122',
+        panNumber: 'ABCDE9988Z',
+      },
+      familyDetails: {},
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '77 Cross Rd', villageOrArea: 'Anna Nagar', taluk: 'Madurai', district: 'Madurai', state: 'Tamil Nadu', pincode: '625020' },
+        temporaryAddress: { doorNoStreet: '77 Cross Rd', villageOrArea: 'Anna Nagar', taluk: 'Madurai', district: 'Madurai', state: 'Tamil Nadu', pincode: '625020' },
+        sameAsPermanent: true,
+      },
+      educationDetails: { highestQualification: 'B.E', institutionName: 'Anna University', passingYear: '2019' },
+      employmentDetails: { hasPreviousExperience: false },
+      preferredJobRole: 'GOLD',
+      referenceDetails: { referralSource: 'Walk-in Direct' },
+      declarationAccepted: true,
+    };
+
+    const newCandidateWithPdf = await submitApplication(
+      newCandidatePdfInput,
+      validJpgBuffer,
+      'photo_arun.jpg',
+      validPdfBuffer,
+      'arun_curriculum_vitae.pdf'
+    );
+    assert.ok(newCandidateWithPdf.applicationId);
+
+    const savedNewCandidate = await getCandidateById(newCandidateWithPdf.candidateId);
+    assert.ok(savedNewCandidate);
+    assert.ok(savedNewCandidate!.resumeStorageKey, 'Resume storage key must be set');
+    assert.strictEqual(savedNewCandidate!.resumeFileName, 'arun_curriculum_vitae.pdf');
+    assert.strictEqual(savedNewCandidate!.resumeMimeType, 'application/pdf');
+    assert.strictEqual(savedNewCandidate!.resumeFileSize, validPdfBuffer.length);
+
+    // Verify resume file is stored and securely retrievable
+    const retrievedResume = await getCandidateResume(savedNewCandidate!.resumeStorageKey!);
+    assert.ok(retrievedResume, 'Saved resume must be retrievable from storage');
+    assert.strictEqual(retrievedResume!.buffer.toString(), validPdfBuffer.toString());
+    console.log('✔ Test 8.4: New candidate with PDF resume (< 5 MB) saved to MongoDB and securely retrievable');
+
+    // 8.5 Submit New Application with Valid DOCX Resume (< 5 MB)
+    const newCandidateDocxInput: any = {
+      personalDetails: {
+        fullName: 'Swetha Ramanathan',
+        dateOfBirth: '1998-11-10',
+        age: 28,
+        gender: 'Female',
+        maritalStatus: 'Single',
+        fathersName: 'Father Swetha',
+        mothersName: 'Mother Swetha',
+        mobileNumber: '9840887766',
+        email: 'swetha.docx@example.com',
+        aadhaarNumber: '889900112233',
+        panNumber: 'BCDEF8877Y',
+      },
+      familyDetails: {},
+      addressDetails: {
+        permanentAddress: { doorNoStreet: '10 Racecourse Rd', villageOrArea: 'Racecourse', taluk: 'Madurai', district: 'Madurai', state: 'Tamil Nadu', pincode: '625002' },
+        temporaryAddress: { doorNoStreet: '10 Racecourse Rd', villageOrArea: 'Racecourse', taluk: 'Madurai', district: 'Madurai', state: 'Tamil Nadu', pincode: '625002' },
+        sameAsPermanent: true,
+      },
+      educationDetails: { highestQualification: 'MBA', institutionName: 'PSG College', passingYear: '2021' },
+      employmentDetails: { hasPreviousExperience: false },
+      preferredJobRole: 'NIDHI',
+      referenceDetails: { referralSource: 'Walk-in Direct' },
+      declarationAccepted: true,
+    };
+
+    const newCandidateWithDocx = await submitApplication(
+      newCandidateDocxInput,
+      validJpgBuffer,
+      'photo_swetha.jpg',
+      validDocxBuffer,
+      'swetha_profile.docx'
+    );
+    assert.ok(newCandidateWithDocx.applicationId);
+
+    const savedDocxCandidate = await getCandidateById(newCandidateWithDocx.candidateId);
+    assert.ok(savedDocxCandidate);
+    assert.ok(savedDocxCandidate!.resumeStorageKey);
+    assert.strictEqual(savedDocxCandidate!.resumeFileName, 'swetha_profile.docx');
+    assert.strictEqual(savedDocxCandidate!.resumeMimeType, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    const retrievedDocxResume = await getCandidateResume(savedDocxCandidate!.resumeStorageKey!);
+    assert.ok(retrievedDocxResume);
+    assert.strictEqual(retrievedDocxResume!.buffer.length, validDocxBuffer.length);
+    console.log('✔ Test 8.5: New candidate with DOCX resume (< 5 MB) saved and retrievable');
+
+    // 8.6 Excel Export with Both Old (NIL) and New (Filename) Candidates
+    const excelBuffer = await exportCandidatesToExcel({});
+    assert.ok(excelBuffer && excelBuffer.length > 1000, 'Excel export buffer must be generated');
+
+    const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
+    const sheet = workbook.Sheets['Candidates'];
+    assert.ok(sheet, 'Candidates worksheet must exist in Excel workbook');
+
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+    assert.ok(rows.length >= 8, 'Excel export must contain both legacy and new candidates');
+
+    // Find row for legacy candidate and verify Resume column is 'NIL'
+    const legacyRow = rows.find((r) => r['Application ID'] === legacyCandidate!.applicationId);
+    assert.ok(legacyRow, 'Legacy candidate row must be present in Excel export');
+    assert.strictEqual(legacyRow['Resume'], 'NIL', 'Legacy candidate without resume must display NIL in Excel');
+
+    // Find row for new candidates and verify Resume column has filename
+    const arunRow = rows.find((r) => r['Application ID'] === savedNewCandidate!.applicationId);
+    assert.ok(arunRow, 'New candidate row must be present in Excel export');
+    assert.strictEqual(arunRow['Resume'], 'arun_curriculum_vitae.pdf', 'New candidate must display resume filename in Excel');
+
+    const swethaRow = rows.find((r) => r['Application ID'] === savedDocxCandidate!.applicationId);
+    assert.ok(swethaRow, 'New DOCX candidate row must be present in Excel export');
+    assert.strictEqual(swethaRow['Resume'], 'swetha_profile.docx', 'DOCX candidate must display resume filename in Excel');
+    console.log('✔ Test 8.6: Excel export contains Resume column with NIL for legacy candidates and filename for new candidates');
+
+    // 8.7 PDF Generation for New Candidate with Resume
+    const newCandidatePdf = await generateCandidatePdf(savedNewCandidate!);
+    assert.ok(newCandidatePdf instanceof Uint8Array);
+    assert.ok(newCandidatePdf.length > 5000);
+    console.log('✔ Test 8.7: Official application PDF generated cleanly for candidate with resume attached');
+
+    // 8.8 Coexistence in Dashboard & Search/Filter/Pagination
+    const allCandidatesResult = await getCandidates({ page: 1, limit: 20 });
+    assert.ok(allCandidatesResult.candidates.length >= 8, 'Dashboard query returns all legacy and new candidates together');
+    const hasLegacyInList = allCandidatesResult.candidates.some((c) => !c.resumeStorageKey);
+    const hasNewInList = allCandidatesResult.candidates.some((c) => !!c.resumeStorageKey);
+    assert.strictEqual(hasLegacyInList, true, 'Legacy candidates appear in candidate list');
+    assert.strictEqual(hasNewInList, true, 'New candidates appear in candidate list');
+
+    // Search for new candidate
+    const searchResult = await getCandidates({ search: 'Arun Kumar' });
+    assert.strictEqual(searchResult.candidates.length, 1);
+    assert.strictEqual(searchResult.candidates[0].resumeFileName, 'arun_curriculum_vitae.pdf');
+
+    // Filter by role for new candidate
+    const filterNidhiResult = await getCandidates({ role: 'NIDHI' });
+    assert.ok(filterNidhiResult.candidates.length >= 2, 'NIDHI filter returns both old and new candidates');
+    console.log('✔ Test 8.8: Old and new candidates coexist seamlessly in dashboard, search, filter, and pagination');
+
+    // 8.9 Candidate Deletion Cleans Up Resume File
+    const resumeKeyToDelete = savedDocxCandidate!.resumeStorageKey!;
+    const deleteCandidateResult = await deleteCandidate(savedDocxCandidate!._id);
+    assert.strictEqual(deleteCandidateResult.success, true);
+
+    const resumeCandidateAfterDelete = await Candidate.findById(savedDocxCandidate!._id);
+    assert.strictEqual(resumeCandidateAfterDelete, null, 'Candidate must be deleted from MongoDB');
+
+    const resumeAfterDelete = await getCandidateResume(resumeKeyToDelete);
+    assert.strictEqual(resumeAfterDelete, null, 'Resume file must be cleaned up from storage upon deletion');
+    console.log('✔ Test 8.9: Candidate deletion cleans up candidate resume from storage without affecting other candidates');
 
     console.log('\n==================================================');
     console.log('ALL TESTS PASSED WITH 100% SUCCESS!');

@@ -107,6 +107,10 @@ export interface CandidateRecord {
   photographStorageKey: string;
   photographFileName?: string;
   photographMimeType?: string;
+  resumeStorageKey?: string;
+  resumeFileName?: string;
+  resumeMimeType?: string;
+  resumeFileSize?: number;
   applicationStatus: ApplicationStatus;
   statusNotes?: string;
   isExEmployee?: boolean;

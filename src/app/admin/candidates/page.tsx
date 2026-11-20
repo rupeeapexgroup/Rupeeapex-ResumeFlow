@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   X,
   FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 
 export default function AdminCandidatesPage() {
@@ -460,6 +461,7 @@ export default function AdminCandidatesPage() {
                     <th className="px-4 py-3.5">Education</th>
                     <th className="px-4 py-3.5">Experience</th>
                     <th className="px-4 py-3.5">Preferred Job Role</th>
+                    <th className="px-4 py-3.5">Resume</th>
                     <th className="px-4 py-3.5">Application Date</th>
                     <th className="px-4 py-3.5 text-right">Actions</th>
                   </tr>
@@ -467,18 +469,18 @@ export default function AdminCandidatesPage() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
-                        <div className="inline-flex items-center gap-2">
-                          <RefreshCw className="w-4 h-4 animate-spin text-[#006B3C]" />
-                          <span>Loading candidate applications...</span>
-                        </div>
-                      </td>
+                        <td colSpan={10} className="px-4 py-12 text-center text-slate-400">
+                          <div className="inline-flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 animate-spin text-[#006B3C]" />
+                            <span>Loading candidate applications...</span>
+                          </div>
+                        </td>
                     </tr>
                   ) : candidates.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-slate-500">
-                        No candidate applications found matching your criteria.
-                      </td>
+                        <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                          No candidate applications found matching your criteria.
+                        </td>
                     </tr>
                   ) : (
                     candidates.map((candidate, index) => {
@@ -542,11 +544,10 @@ export default function AdminCandidatesPage() {
                           {/* Experience */}
                           <td className="px-4 py-3.5">
                             <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                                candidate.employmentDetails?.hasPreviousExperience
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium ${candidate.employmentDetails?.hasPreviousExperience
                                   ? 'bg-blue-50 text-blue-700'
                                   : 'bg-slate-100 text-slate-600'
-                              }`}
+                                }`}
                             >
                               {expDisplay}
                             </span>
@@ -557,6 +558,36 @@ export default function AdminCandidatesPage() {
                             <span className="px-2.5 py-1 text-[11px] font-extrabold bg-amber-50 text-amber-900 border border-amber-200 rounded-md">
                               {roleDisplay}
                             </span>
+                          </td>
+
+                          {/* Resume */}
+                          <td className="px-4 py-3.5">
+                            {candidate.resumeStorageKey ? (
+                              <div className="inline-flex items-center gap-1.5">
+                                <a
+                                  href={`/api/candidates/${candidate._id}/resume`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`View Resume (${candidate.resumeFileName || 'Document'})`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-[#006B3C] text-[#006B3C] hover:text-white border border-emerald-200 hover:border-[#006B3C] rounded-lg font-semibold text-[11px] transition-colors shadow-2xs"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>View</span>
+                                </a>
+                                <a
+                                  href={`/api/candidates/${candidate._id}/resume?download=true`}
+                                  download={candidate.resumeFileName || `Resume_${candidate.applicationId}.pdf`}
+                                  title={`Download Resume (${candidate.resumeFileName || 'Document'})`}
+                                  className="p-1 text-slate-500 hover:text-[#006B3C] hover:bg-slate-100 rounded-md transition-colors"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold text-slate-400 bg-slate-100">
+                                NIL
+                              </span>
+                            )}
                           </td>
 
                           {/* Date */}

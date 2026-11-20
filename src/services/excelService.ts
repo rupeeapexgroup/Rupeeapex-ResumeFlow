@@ -197,6 +197,7 @@ export async function exportCandidatesToExcel(params: CandidateFilterParams): Pr
       'Expected Salary': c.expectedSalary || '',
       'Notice Period': c.noticePeriod || '',
       'Applicant Type': applicantTypeLabel,
+      'Resume': c.resumeStorageKey ? (c.resumeFileName || 'Uploaded') : 'NIL',
       'System Remarks': c.statusNotes || '',
     };
   });
@@ -247,6 +248,7 @@ export async function exportCandidatesToExcel(params: CandidateFilterParams): Pr
     { wch: 16 }, // Expected Salary
     { wch: 15 }, // Notice Period
     { wch: 18 }, // Applicant Type
+    { wch: 25 }, // Resume
     { wch: 30 }, // System Remarks
   ];
 

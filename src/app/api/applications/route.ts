@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { candidateApplicationSchema } from '@/lib/validation';
 import { submitApplication } from '@/services/candidateService';
-import { validateImageMagicBytes } from '@/lib/storage';
+import { validateImageMagicBytes, validateResumeMagicBytes } from '@/lib/storage';
 
 // Simple in-memory rate limiting map for public applications
 const ipSubmissionTracker = new Map<string, { count: number; resetAt: number }>();
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const dataJson = formData.get('data') as string;
     const photoFile = formData.get('photograph') as File | null;
+    const resumeFile = formData.get('resume') as File | null;
 
     if (!dataJson) {
       return NextResponse.json({ error: 'Missing application data payload' }, { status: 400 });
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
 
     if (!photoFile) {
       return NextResponse.json({ error: 'Candidate photograph is mandatory' }, { status: 400 });
+    }
+
+    if (!resumeFile || resumeFile.size === 0) {
+      return NextResponse.json(
+        { error: 'Resume upload is mandatory. Please upload your resume in PDF, DOC, or DOCX format (Max 5 MB).' },
+        { status: 400 }
+      );
     }
 
     let parsedBody;
@@ -79,7 +87,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate real file content via magic bytes (don't trust client-supplied MIME or extension alone)
+    // Validate real photo content via magic bytes (don't trust client-supplied MIME or extension alone)
     const { isValid } = validateImageMagicBytes(buffer);
     if (!isValid) {
       return NextResponse.json(
@@ -88,10 +96,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate Resume file size & format
+    const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (resumeFile.size > MAX_RESUME_BYTES) {
+      return NextResponse.json(
+        { error: 'Resume size exceeds the maximum allowed limit of 5 MB. Please select a file smaller than or equal to 5 MB.' },
+        { status: 413 }
+      );
+    }
+
+    const resumeArrayBuffer = await resumeFile.arrayBuffer();
+    const resumeBuffer = Buffer.from(resumeArrayBuffer);
+
+    if (resumeBuffer.length > MAX_RESUME_BYTES) {
+      return NextResponse.json(
+        { error: 'Resume size exceeds the maximum allowed limit of 5 MB. Please select a file smaller than or equal to 5 MB.' },
+        { status: 413 }
+      );
+    }
+
+    const { isValid: isResumeValid } = validateResumeMagicBytes(resumeBuffer, resumeFile.name);
+    if (!isResumeValid) {
+      return NextResponse.json(
+        { error: 'Invalid resume format. Only PDF, DOC, and DOCX documents up to 5 MB are allowed.' },
+        { status: 400 }
+      );
+    }
+
     const result = await submitApplication(
       validationResult.data,
       buffer,
-      photoFile.name || 'candidate-photo.jpg'
+      photoFile.name || 'candidate-photo.jpg',
+      resumeBuffer,
+      resumeFile.name || 'resume.pdf'
     );
 
     return NextResponse.json({
@@ -102,8 +139,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Candidate submission error:', err);
+    const isConnErr =
+      /ECONNREFUSED|ServerSelection|timed out|buffering timed out/i.test(err?.name || '') ||
+      /ECONNREFUSED|server selection|timed out|buffering timed out/i.test(err?.message || '');
+    const errorMessage = isConnErr
+      ? 'Database connection unavailable. Please ensure MongoDB is running (e.g. run "npm run db" in a separate terminal).'
+      : err.message || 'Failed to submit candidate application';
     return NextResponse.json(
-      { error: err.message || 'Failed to submit candidate application' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import { Candidate, ICandidate } from '@/models/Candidate';
 import { getNextApplicationId } from '@/models/Counter';
-import { saveCandidatePhotograph, deleteCandidatePhotograph } from '@/lib/storage';
+import { saveCandidatePhotograph, deleteCandidatePhotograph, saveCandidateResume, deleteCandidateResume } from '@/lib/storage';
 import { CandidateApplicationInput } from '@/lib/validation';
 import { DashboardStats, PreferredJobRole, ApplicationStatus, CandidateRecord } from '@/types';
 
@@ -26,12 +26,28 @@ export interface CandidateFilterParams {
 export async function submitApplication(
   data: CandidateApplicationInput,
   photoBuffer: Buffer,
-  photoOriginalName: string
+  photoOriginalName: string,
+  resumeBuffer?: Buffer,
+  resumeOriginalName?: string
 ): Promise<{ applicationId: string; candidateId: string }> {
   await connectToDatabase();
 
   // 1. Save photo to private storage
   const { storageKey, mimeType } = await saveCandidatePhotograph(photoBuffer, photoOriginalName);
+
+  // 1b. Save resume to private storage if provided
+  let resumeStorageKey: string | undefined;
+  let resumeFileName: string | undefined;
+  let resumeMimeType: string | undefined;
+  let resumeFileSize: number | undefined;
+
+  if (resumeBuffer && resumeOriginalName) {
+    const savedResume = await saveCandidateResume(resumeBuffer, resumeOriginalName);
+    resumeStorageKey = savedResume.storageKey;
+    resumeFileName = savedResume.fileName;
+    resumeMimeType = savedResume.mimeType;
+    resumeFileSize = savedResume.size;
+  }
 
   // 2. Generate unique atomic Application ID
   const applicationId = await getNextApplicationId();
@@ -97,6 +113,10 @@ export async function submitApplication(
     photographStorageKey: storageKey,
     photographFileName: photoOriginalName,
     photographMimeType: mimeType,
+    resumeStorageKey,
+    resumeFileName,
+    resumeMimeType,
+    resumeFileSize,
     applicationStatus: 'NEW',
     isExEmployee,
     isRepeatApplicant,
@@ -339,6 +359,7 @@ export async function deleteCandidate(
   }
 
   const photoKey = candidate.photographStorageKey;
+  const resumeKey = candidate.resumeStorageKey;
   const candidateIdStr = candidate._id.toString();
   const appIdStr = candidate.applicationId;
   const candidateName = candidate.personalDetails?.fullName || 'Candidate';
@@ -362,6 +383,22 @@ export async function deleteCandidate(
       }
     } catch (photoErr) {
       console.warn('Error during candidate photo cleanup:', photoErr);
+    }
+  }
+
+  // 4. Delete candidate resume only if not shared by any other candidate
+  if (resumeKey) {
+    try {
+      const remainingCandidateWithResume = await Candidate.findOne({
+        resumeStorageKey: resumeKey,
+      }).lean();
+
+      if (!remainingCandidateWithResume) {
+        // Safe to remove the resume from storage
+        await deleteCandidateResume(resumeKey);
+      }
+    } catch (resumeErr) {
+      console.warn('Error during candidate resume cleanup:', resumeErr);
     }
   }
 

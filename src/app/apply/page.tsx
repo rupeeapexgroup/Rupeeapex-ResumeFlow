@@ -26,6 +26,8 @@ import {
   Printer,
   UploadCloud,
   FileCheck,
+  FileText,
+  Upload,
   X,
   WifiOff,
   ServerCrash,
@@ -33,6 +35,7 @@ import {
 
 export default function CandidateApplyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -84,7 +87,7 @@ export default function CandidateApplyPage() {
     },
     educationDetails: {
       highestQualification: '',
-      educationDetails: '', 
+      educationDetails: '',
       institutionName: '',
       passingYear: '',
     },
@@ -119,6 +122,9 @@ export default function CandidateApplyPage() {
   // Photo state
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Resume state
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   // Submission & UI states
   const [submitting, setSubmitting] = useState(false);
@@ -280,6 +286,50 @@ export default function CandidateApplyPage() {
     }
   };
 
+  // Handle Resume selection with immediate strict validation (PDF, DOC, DOCX up to 5 MB)
+  const handleResumeSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check extension
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    const allowedExts = ['.pdf', '.doc', '.docx'];
+    const isAllowedExt = allowedExts.includes(ext);
+
+    if (!isAllowedExt) {
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
+      e.target.value = '';
+      setResumeFile(null);
+      const invalidFormatMsg = 'Invalid file format. Please upload your resume in PDF, DOC, or DOCX format only.';
+      setFieldErrors((prev) => ({ ...prev, resume: invalidFormatMsg }));
+      showPopupError(invalidFormatMsg, 'Unsupported Resume Format', 'photo');
+      return;
+    }
+
+    // Strict 5 MB file size limit (5 * 1024 * 1024 bytes = 5,242,880 bytes)
+    const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_RESUME_BYTES) {
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
+      e.target.value = '';
+      setResumeFile(null);
+
+      const sizeErrorMsg = 'Resume size exceeds the maximum allowed limit of 5 MB. Please select a file smaller than or equal to 5 MB.';
+      setFieldErrors((prev) => ({ ...prev, resume: sizeErrorMsg }));
+      showPopupError(sizeErrorMsg, 'Resume Size Exceeded', 'photo');
+      return;
+    }
+
+    // Valid resume selected
+    clearFieldError('resume');
+    closePopupError();
+    setResumeFile(file);
+  };
+
+  const handleRemoveResume = () => {
+    setResumeFile(null);
+    if (resumeInputRef.current) resumeInputRef.current.value = '';
+  };
+
   // Handle "Same as Permanent" toggle
   const handleSameAddressToggle = (checked: boolean) => {
     setFormData((prev) => ({
@@ -303,6 +353,11 @@ export default function CandidateApplyPage() {
     // Validate Photograph
     if (!photoFile) {
       newErrors['photograph'] = 'Candidate photograph is required.';
+    }
+
+    // Validate Resume
+    if (!resumeFile) {
+      newErrors['resume'] = 'Resume upload is mandatory. Please upload your resume in PDF, DOC, or DOCX format (Max 5 MB).';
     }
 
     // Validate Personal Details
@@ -414,8 +469,12 @@ export default function CandidateApplyPage() {
 
       showPopupError(
         firstMessage,
-        firstKey === 'photograph' ? 'Photograph Required' : 'Please Check Details',
-        firstKey === 'photograph' ? 'photo' : 'validation'
+        firstKey === 'photograph'
+          ? 'Photograph Required'
+          : firstKey === 'resume'
+            ? 'Resume Required'
+            : 'Please Check Details',
+        firstKey === 'photograph' || firstKey === 'resume' ? 'photo' : 'validation'
       );
 
       // Smooth scroll to the invalid field on mobile/desktop
@@ -461,6 +520,7 @@ export default function CandidateApplyPage() {
       const sendFormData = new FormData();
       sendFormData.append('data', JSON.stringify(payload));
       sendFormData.append('photograph', photoFile!);
+      sendFormData.append('resume', resumeFile!);
 
       let res: Response;
       try {
@@ -499,17 +559,27 @@ export default function CandidateApplyPage() {
       }
 
       if (!res.ok) {
-        // HTTP 413 Payload Too Large (Oversized photo)
+        // HTTP 413 Payload Too Large (Oversized photo or resume)
         if (res.status === 413) {
+          const isResume = /resume|cv|document/i.test(data?.error || '');
           showPopupError(
-            'The uploaded photograph exceeds the maximum server limit of 5 MB. Please select a smaller photo.',
-            'Photo Size Exceeded',
+            data?.error || (isResume
+              ? 'The uploaded resume exceeds the maximum server limit of 5 MB. Please select a smaller document.'
+              : 'The uploaded photograph exceeds the maximum server limit of 5 MB. Please select a smaller photo.'),
+            isResume ? 'Resume Size Exceeded' : 'Photo Size Exceeded',
             'photo'
           );
-          setFieldErrors((prev) => ({
-            ...prev,
-            photograph: 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.',
-          }));
+          if (isResume) {
+            setFieldErrors((prev) => ({
+              ...prev,
+              resume: 'Resume size exceeds the maximum allowed limit of 5 MB. Please select a file smaller than or equal to 5 MB.',
+            }));
+          } else {
+            setFieldErrors((prev) => ({
+              ...prev,
+              photograph: 'Photo size exceeds the maximum allowed limit of 5 MB. Please select an image smaller than or equal to 5 MB.',
+            }));
+          }
           setSubmitting(false);
           return;
         }
@@ -549,10 +619,15 @@ export default function CandidateApplyPage() {
 
         const errorMessage = data?.error || 'Failed to submit application. Please review the highlighted fields in red.';
         const isPhotoError = /photo|photograph|image/i.test(errorMessage);
+        const isResumeError = /resume|cv|document/i.test(errorMessage);
         showPopupError(
           errorMessage,
-          isPhotoError ? 'Photo Upload Error' : 'Please Check Details',
-          isPhotoError ? 'photo' : 'validation'
+          isPhotoError
+            ? 'Photo Upload Error'
+            : isResumeError
+              ? 'Resume Upload Error'
+              : 'Please Check Details',
+          isPhotoError || isResumeError ? 'photo' : 'validation'
         );
         setSubmitting(false);
         return;
@@ -643,15 +718,14 @@ export default function CandidateApplyPage() {
 
             {/* Error Type Icon */}
             <div
-              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm ${
-                errorPopup.type === 'network'
+              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm ${errorPopup.type === 'network'
                   ? 'bg-amber-100 text-amber-700'
                   : errorPopup.type === 'photo'
-                  ? 'bg-orange-100 text-orange-700'
-                  : errorPopup.type === 'server' || errorPopup.type === 'database'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-red-100 text-red-600'
-              }`}
+                    ? 'bg-orange-100 text-orange-700'
+                    : errorPopup.type === 'server' || errorPopup.type === 'database'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-red-100 text-red-600'
+                }`}
             >
               {errorPopup.type === 'network' ? (
                 <WifiOff className="w-7 h-7" />
@@ -780,6 +854,107 @@ export default function CandidateApplyPage() {
                   <p>• Accepted formats: <strong>JPG, JPEG, PNG, WEBP</strong> (Max file size: 5 MB).</p>
                   <p>• You may capture directly from your mobile camera or pick from gallery.</p>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ==================================================== */}
+          {/* SECTION: CANDIDATE RESUME UPLOAD */}
+          {/* ==================================================== */}
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-emerald-50/70 px-6 py-3 border-b border-emerald-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#006B3C]" />
+                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+                  Upload Resume / CV <span className="text-red-500">*</span>
+                </h2>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-200">
+                PDF, DOC, DOCX • Max 5 MB
+              </span>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              {/* Hidden file input */}
+              <input
+                id="candidate-resume-input"
+                type="file"
+                ref={resumeInputRef}
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleResumeSelect}
+                className="sr-only"
+              />
+
+              <div
+                className={`rounded-xl border transition-all ${fieldErrors['resume']
+                    ? 'border-red-500 ring-4 ring-red-100 bg-red-50/40'
+                    : resumeFile
+                      ? 'border-emerald-300 bg-emerald-50/20'
+                      : 'border-slate-200 hover:border-[#006B3C]/50 bg-slate-50/50 hover:bg-slate-50'
+                  } p-3 sm:p-4`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Left: Upload Button & Filename Info */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
+                    <label
+                      htmlFor="candidate-resume-input"
+                      className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-[#006B3C] hover:bg-[#005530] text-white text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer select-none shrink-0 active:scale-95"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#F5C400]" />
+                      <span>Upload Resume (Max 5 MB)</span>
+                    </label>
+
+                    {/* Filename display or empty helper text */}
+                    <div className="min-w-0 flex-1">
+                      {resumeFile ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="text-xs font-bold text-slate-800 truncate" title={resumeFile.name}>
+                            {resumeFile.name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                            ({(resumeFile.size / (1024 * 1024)).toFixed(2)} MB)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500 block truncate">
+                          No file chosen. Supported: <strong className="text-slate-700">PDF, DOC, DOCX</strong> (Max 5 MB)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Replace / Remove Controls */}
+                  {resumeFile && (
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 pt-1 sm:pt-0">
+                      <label
+                        htmlFor="candidate-resume-input"
+                        className="text-xs text-[#006B3C] hover:text-[#005530] hover:underline font-semibold cursor-pointer px-2 py-1"
+                        title="Choose a different resume file"
+                      >
+                        Replace
+                      </label>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={handleRemoveResume}
+                        className="text-xs text-red-600 hover:text-red-800 font-semibold px-2 py-1 flex items-center gap-1"
+                        title="Remove selected resume"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Inline Error Message */}
+                {fieldErrors['resume'] && (
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-start gap-2 animate-fadeIn">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{fieldErrors['resume']}</span>
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -1169,9 +1344,8 @@ export default function CandidateApplyPage() {
                       },
                     }))
                   }
-                  className={`w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
-                    fieldErrors['ifscCode'] ? 'border-red-500 ring-2 ring-red-200' : ''
-                  }`}
+                  className={`w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${fieldErrors['ifscCode'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                    }`}
                 />
                 {fieldErrors['ifscCode'] && (
                   <p className="mt-1 text-xs text-red-600 font-medium">
@@ -1864,9 +2038,8 @@ export default function CandidateApplyPage() {
                             },
                           }))
                         }
-                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
-                          fieldErrors['joinDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
-                        }`}
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${fieldErrors['joinDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                          }`}
                       />
                       {fieldErrors['joinDesignation'] && (
                         <p className="mt-1 text-xs text-red-600 font-medium">
@@ -1894,9 +2067,8 @@ export default function CandidateApplyPage() {
                             },
                           }))
                         }
-                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
-                          fieldErrors['relievingDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
-                        }`}
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${fieldErrors['relievingDesignation'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                          }`}
                       />
                       {fieldErrors['relievingDesignation'] && (
                         <p className="mt-1 text-xs text-red-600 font-medium">
@@ -1945,9 +2117,8 @@ export default function CandidateApplyPage() {
                             },
                           }))
                         }
-                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
-                          fieldErrors['reasonForRelieving'] ? 'border-red-500 ring-2 ring-red-200' : ''
-                        }`}
+                        className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${fieldErrors['reasonForRelieving'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                          }`}
                       />
                       {fieldErrors['reasonForRelieving'] && (
                         <p className="mt-1 text-xs text-red-600 font-medium">
@@ -2030,9 +2201,8 @@ export default function CandidateApplyPage() {
                               },
                             }))
                           }
-                          className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${
-                            fieldErrors['previousCompany'] ? 'border-red-500 ring-2 ring-red-200' : ''
-                          }`}
+                          className={`w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-[#006B3C] focus:outline-none ${fieldErrors['previousCompany'] ? 'border-red-500 ring-2 ring-red-200' : ''
+                            }`}
                         />
                         {fieldErrors['previousCompany'] && (
                           <p className="mt-1 text-xs text-red-600 font-medium">
