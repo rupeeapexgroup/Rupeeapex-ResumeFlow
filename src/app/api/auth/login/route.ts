@@ -33,8 +33,14 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err: any) {
     console.error('Login error:', err);
+    const isConnErr =
+      /ECONNREFUSED|ServerSelection|timed out|buffering timed out/i.test(err?.name || '') ||
+      /ECONNREFUSED|server selection|timed out|buffering timed out/i.test(err?.message || '');
+    const errorMessage = isConnErr
+      ? 'Database connection unavailable. Please ensure MongoDB is running (e.g. run "npm run db" in a separate terminal).'
+      : err?.message || 'An unexpected server error occurred during login';
     return NextResponse.json(
-      { error: 'An unexpected server error occurred during login' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

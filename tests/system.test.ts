@@ -885,7 +885,7 @@ async function runTests() {
 
     // 8.9 Candidate Deletion Cleans Up Resume File
     const resumeKeyToDelete = savedDocxCandidate!.resumeStorageKey!;
-    const deleteCandidateResult = await deleteCandidate(savedDocxCandidate!._id);
+    const deleteCandidateResult = await deleteCandidate(String(savedDocxCandidate!._id));
     assert.strictEqual(deleteCandidateResult.success, true);
 
     const resumeCandidateAfterDelete = await Candidate.findById(savedDocxCandidate!._id);
