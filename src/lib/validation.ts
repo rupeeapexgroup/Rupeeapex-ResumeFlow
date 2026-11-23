@@ -145,6 +145,16 @@ export const candidateApplicationSchema = z
       }
     }
 
+    if (data.referenceDetails?.referralSource === 'Reference') {
+      if (!data.referenceDetails.referrerName || !data.referenceDetails.referrerName.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Reference Name is mandatory.',
+          path: ['referenceDetails', 'referrerName'],
+        });
+      }
+    }
+
     if (data.employmentDetails?.previouslyWorkedHere) {
       if (!data.employmentDetails.joinDesignation || !data.employmentDetails.joinDesignation.trim()) {
         ctx.addIssue({

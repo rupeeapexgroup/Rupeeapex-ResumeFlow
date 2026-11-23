@@ -146,6 +146,7 @@ export default function CandidateApplyPage() {
     type?: 'validation' | 'network' | 'photo' | 'server' | 'database' | 'general';
   } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [validatedSteps, setValidatedSteps] = useState<Record<number, boolean>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const showPopupError = (
@@ -197,7 +198,7 @@ export default function CandidateApplyPage() {
     return baseClasses;
   };
 
-  // Smooth scroll to an invalid field
+  // Smooth scroll to an invalid field and bring it into visible area
   const scrollToField = (fieldName: string) => {
     setTimeout(() => {
       if (typeof document !== 'undefined') {
@@ -206,15 +207,275 @@ export default function CandidateApplyPage() {
         );
         if (errorEl) {
           errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if ('focus' in errorEl && typeof (errorEl as HTMLElement).focus === 'function') {
+            (errorEl as HTMLElement).focus({ preventScroll: true });
+          }
         }
       }
-    }, 100);
+    }, 80);
+  };
+
+  // Single field validation rule evaluation
+  const validateSingleField = (
+    field: string,
+    value: any,
+    formState = formData,
+    currentPhoto = photoFile,
+    currentResume = resumeFile
+  ): string | null => {
+    switch (field) {
+      case 'photograph':
+        if (!currentPhoto) return 'Candidate photograph is mandatory.';
+        return null;
+
+      case 'fullName':
+        if (!value || !value.toString().trim()) return 'Candidate Name is mandatory.';
+        if (value.toString().trim().length < 2) return 'Candidate Name must be at least 2 characters.';
+        return null;
+
+      case 'dateOfBirth':
+        if (!value) return 'Date of Birth is mandatory.';
+        return null;
+
+      case 'age':
+        if (!value || Number(value) < 18 || Number(value) > 70) return 'Age must be between 18 and 70.';
+        return null;
+
+      case 'gender':
+        if (!value) return 'Please select gender.';
+        return null;
+
+      case 'maritalStatus':
+        if (!value) return 'Please select marital status.';
+        return null;
+
+      case 'fathersName':
+        if (!value || !value.toString().trim()) return "Father's Name is mandatory.";
+        if (value.toString().trim().length < 2) return "Father's Name must be at least 2 characters.";
+        return null;
+
+      case 'mothersName':
+        if (!value || !value.toString().trim()) return "Mother's Name is mandatory.";
+        if (value.toString().trim().length < 2) return "Mother's Name must be at least 2 characters.";
+        return null;
+
+      case 'mobileNumber':
+        if (!value || !value.toString().trim()) return 'Mobile Number is mandatory.';
+        if (!/^[6-9]\d{9}$/.test(value.toString().trim())) return 'Enter a valid 10-digit Indian Mobile Number.';
+        return null;
+
+      case 'alternativeMobileNumber':
+        if (value && value.toString().trim() && !/^[6-9]\d{9}$/.test(value.toString().trim())) {
+          return 'Enter valid 10-digit Alternative Mobile.';
+        }
+        return null;
+
+      case 'email':
+        if (!value || !value.toString().trim()) return 'Email Address is mandatory.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.toString().trim())) return 'Enter a valid Email Address.';
+        return null;
+
+      case 'aadhaarNumber':
+        if (!value || !value.toString().trim()) return 'Aadhaar Number is mandatory.';
+        if (!/^\d{12}$/.test(value.toString().trim())) return 'Enter a valid 12-digit Aadhaar Number.';
+        return null;
+
+      case 'panNumber':
+        if (value && value.toString().trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(value.toString().trim())) {
+          return 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F).';
+        }
+        return null;
+
+      case 'ifscCode':
+        if (value && value.toString().trim() && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(value.toString().trim())) {
+          return 'Enter a valid 11-character IFSC Code (e.g. SBIN0001234).';
+        }
+        return null;
+
+      case 'fathersMobile':
+        if (value && value.toString().trim() && !/^[0-9]{10}$/.test(value.toString().trim())) {
+          return 'Enter valid 10-digit mobile number for Father.';
+        }
+        return null;
+
+      case 'mothersMobile':
+        if (value && value.toString().trim() && !/^[0-9]{10}$/.test(value.toString().trim())) {
+          return 'Enter valid 10-digit mobile number for Mother.';
+        }
+        return null;
+
+      case 'doorNoStreet':
+        if (!value || !value.toString().trim()) return 'Door Number / Street is mandatory.';
+        return null;
+
+      case 'villageOrArea':
+        if (!value || !value.toString().trim()) return 'Village / Area is mandatory.';
+        return null;
+
+      case 'taluk':
+        if (!value || !value.toString().trim()) return 'Taluk is mandatory.';
+        return null;
+
+      case 'district':
+        if (!value || !value.toString().trim()) return 'District is mandatory.';
+        return null;
+
+      case 'state':
+        if (!value || !value.toString().trim()) return 'State is mandatory.';
+        return null;
+
+      case 'pincode':
+        if (!value || !value.toString().trim()) return 'PIN Code is mandatory.';
+        if (!/^\d{6}$/.test(value.toString().trim())) return 'Enter a valid 6-digit PIN Code.';
+        return null;
+
+      case 'tempDoorNoStreet':
+        if (!formState.addressDetails.sameAsPermanent && (!value || !value.toString().trim())) {
+          return 'Door Number / Street is mandatory for temporary address.';
+        }
+        return null;
+
+      case 'tempVillageOrArea':
+        if (!formState.addressDetails.sameAsPermanent && (!value || !value.toString().trim())) {
+          return 'Village / Area is mandatory for temporary address.';
+        }
+        return null;
+
+      case 'tempTaluk':
+        if (!formState.addressDetails.sameAsPermanent && (!value || !value.toString().trim())) {
+          return 'Taluk is mandatory for temporary address.';
+        }
+        return null;
+
+      case 'tempDistrict':
+        if (!formState.addressDetails.sameAsPermanent && (!value || !value.toString().trim())) {
+          return 'District is mandatory for temporary address.';
+        }
+        return null;
+
+      case 'tempState':
+        if (!formState.addressDetails.sameAsPermanent && (!value || !value.toString().trim())) {
+          return 'State is mandatory for temporary address.';
+        }
+        return null;
+
+      case 'tempPincode':
+        if (!formState.addressDetails.sameAsPermanent) {
+          if (!value || !value.toString().trim()) return 'PIN Code is mandatory for temporary address.';
+          if (!/^\d{6}$/.test(value.toString().trim())) return 'Enter a valid 6-digit PIN Code for temporary address.';
+        }
+        return null;
+
+      case 'highestQualification':
+        if (!value || !value.toString().trim()) return 'Highest Qualification is mandatory.';
+        return null;
+
+      case 'institutionName':
+        if (!value || !value.toString().trim()) return 'Institution Name is mandatory.';
+        return null;
+
+      case 'passingYear':
+        if (!value || !value.toString().trim()) return 'Year of Passing is mandatory.';
+        if (!/^(19|20)\d{2}$/.test(value.toString().trim())) return 'Enter a valid 4-digit Passing Year.';
+        return null;
+
+      case 'joinDesignation':
+        if (formState.employmentDetails.previouslyWorkedHere && (!value || !value.toString().trim())) {
+          return 'Joining Designation at Rupeeapex is mandatory.';
+        }
+        return null;
+
+      case 'relievingDesignation':
+        if (formState.employmentDetails.previouslyWorkedHere && (!value || !value.toString().trim())) {
+          return 'Relieving Designation at Rupeeapex is mandatory.';
+        }
+        return null;
+
+      case 'reasonForRelieving':
+        if (formState.employmentDetails.previouslyWorkedHere && (!value || !value.toString().trim())) {
+          return 'Reason for Relieving from Rupeeapex is mandatory.';
+        }
+        return null;
+
+      case 'previousCompany':
+        if (formState.employmentDetails.hasPreviousExperience && (!value || !value.toString().trim())) {
+          return 'Previous Company (Experience 1) is mandatory.';
+        }
+        return null;
+
+      case 'previousDesignation':
+        if (formState.employmentDetails.hasPreviousExperience && (!value || !value.toString().trim())) {
+          return 'Previous Designation (Experience 1) is mandatory.';
+        }
+        return null;
+
+      case 'yearsOfExperience':
+        if (formState.employmentDetails.hasPreviousExperience && (!value || Number(value) <= 0)) {
+          return 'Years of Experience (Experience 1) is mandatory.';
+        }
+        return null;
+
+      case 'preferredJobRole':
+        if (!value || !value.toString().trim()) return 'Please select your Preferred Job Role.';
+        return null;
+
+      case 'preferredJobRoleOther':
+        if (formState.preferredJobRole === 'OTHER' && (!value || !value.toString().trim())) {
+          return 'Please specify your preferred job role.';
+        }
+        return null;
+
+      case 'referralSource':
+        if (!value || !value.toString().trim()) return 'Please specify how you came to know about this job.';
+        return null;
+
+      case 'referrerName':
+        if (formState.referenceDetails.referralSource === 'Reference' && (!value || !value.toString().trim())) {
+          return 'Reference Name is mandatory.';
+        }
+        return null;
+
+      case 'resume':
+        if (!currentResume) {
+          return 'Resume upload is mandatory. Please upload your resume in PDF, DOC, or DOCX format (Max 5 MB).';
+        }
+        return null;
+
+      case 'declarationAccepted':
+        if (!value) return 'You must accept the candidate declaration before submitting.';
+        return null;
+
+      default:
+        return null;
+    }
+  };
+
+  // Live validation handler: clears valid fields, shows red border/error if invalid on validated stage
+  const handleLiveValidation = (
+    field: string,
+    value: any,
+    updatedFormData = formData,
+    currentPhoto = photoFile,
+    currentResume = resumeFile
+  ) => {
+    const step = getStepForField(field);
+    const isStepValidated = validatedSteps[step];
+    const hasExistingError = !!fieldErrors[field];
+
+    const err = validateSingleField(field, value, updatedFormData, currentPhoto, currentResume);
+
+    if (!err) {
+      clearFieldError(field);
+    } else if (hasExistingError || isStepValidated) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        [field]: err,
+      }));
+    }
   };
 
   // Auto-calculate age when DOB changes
   const handleDobChange = (dobStr: string) => {
-    clearFieldError('dateOfBirth');
-    clearFieldError('age');
     let calculatedAge = formData.personalDetails.age;
     if (dobStr) {
       const birthDate = new Date(dobStr);
@@ -228,14 +489,19 @@ export default function CandidateApplyPage() {
         calculatedAge = age;
       }
     }
-    setFormData((prev) => ({
-      ...prev,
-      personalDetails: {
-        ...prev.personalDetails,
-        dateOfBirth: dobStr,
-        age: calculatedAge,
-      },
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        personalDetails: {
+          ...prev.personalDetails,
+          dateOfBirth: dobStr,
+          age: calculatedAge,
+        },
+      };
+      handleLiveValidation('dateOfBirth', dobStr, updated);
+      handleLiveValidation('age', calculatedAge, updated);
+      return updated;
+    });
   };
 
   // Handle Photo selection with immediate strict 5 MB validation
@@ -278,6 +544,7 @@ export default function CandidateApplyPage() {
     clearFieldError('photograph');
     closePopupError();
     setPhotoFile(file);
+    handleLiveValidation('photograph', null, formData, file);
 
     if (typeof window !== 'undefined' && 'createImageBitmap' in window) {
       createImageBitmap(file, { imageOrientation: 'from-image' })
@@ -346,11 +613,13 @@ export default function CandidateApplyPage() {
     clearFieldError('resume');
     closePopupError();
     setResumeFile(file);
+    handleLiveValidation('resume', null, formData, photoFile, file);
   };
 
   const handleRemoveResume = () => {
     setResumeFile(null);
     if (resumeInputRef.current) resumeInputRef.current.value = '';
+    handleLiveValidation('resume', null, formData, photoFile, null);
   };
 
   // Handle "Same as Permanent" toggle
@@ -365,6 +634,20 @@ export default function CandidateApplyPage() {
           : prev.addressDetails.temporaryAddress,
       },
     }));
+    if (checked) {
+      setFieldErrors((prev) => {
+        const copy = { ...prev };
+        [
+          'tempDoorNoStreet',
+          'tempVillageOrArea',
+          'tempTaluk',
+          'tempDistrict',
+          'tempState',
+          'tempPincode',
+        ].forEach((k) => delete copy[k]);
+        return copy;
+      });
+    }
   };
 
   // Map any field name to its corresponding stage (1-5)
@@ -456,76 +739,51 @@ export default function CandidateApplyPage() {
   const validateStep1 = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate Photograph
-    if (!photoFile) {
-      errors['photograph'] = 'Candidate photograph is required.';
-    }
+    const photoErr = validateSingleField('photograph', null, formData, photoFile, resumeFile);
+    if (photoErr) errors['photograph'] = photoErr;
 
-    // Validate Personal Details
-    if (!formData.personalDetails.fullName.trim()) {
-      errors['fullName'] = 'Candidate Name is required as per Aadhaar.';
-    }
-    if (!formData.personalDetails.dateOfBirth) {
-      errors['dateOfBirth'] = 'Valid Date of Birth is required.';
-    }
-    if (
-      !formData.personalDetails.age ||
-      formData.personalDetails.age < 18 ||
-      formData.personalDetails.age > 70
-    ) {
-      errors['age'] = 'Age must be between 18 and 70.';
-    }
-    if (!formData.personalDetails.fathersName.trim()) {
-      errors['fathersName'] = "Father's Name is required.";
-    }
-    if (!formData.personalDetails.mothersName.trim()) {
-      errors['mothersName'] = "Mother's Name is required.";
-    }
-    if (
-      !formData.personalDetails.mobileNumber ||
-      !/^[6-9]\d{9}$/.test(formData.personalDetails.mobileNumber)
-    ) {
-      errors['mobileNumber'] = 'Enter a valid 10-digit Indian Mobile Number.';
-    }
-    if (
-      formData.personalDetails.alternativeMobileNumber &&
-      !/^[6-9]\d{9}$/.test(formData.personalDetails.alternativeMobileNumber)
-    ) {
-      errors['alternativeMobileNumber'] = 'Enter valid 10-digit Alternative Mobile.';
-    }
-    if (
-      !formData.personalDetails.email ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.personalDetails.email)
-    ) {
-      errors['email'] = 'Enter a valid Email Address.';
-    }
-    if (
-      !formData.personalDetails.aadhaarNumber ||
-      !/^\d{12}$/.test(formData.personalDetails.aadhaarNumber)
-    ) {
-      errors['aadhaarNumber'] = 'Enter a valid 12-digit Aadhaar Number.';
-    }
-    if (
-      formData.personalDetails.panNumber &&
-      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.personalDetails.panNumber.trim())
-    ) {
-      errors['panNumber'] = 'Enter a valid 10-character PAN Number (e.g. ABCDE1234F).';
-    }
-    if (
-      formData.personalDetails.ifscCode &&
-      !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(formData.personalDetails.ifscCode.trim())
-    ) {
-      errors['ifscCode'] = 'Enter a valid 11-character IFSC Code (e.g. SBIN0001234).';
-    }
+    const nameErr = validateSingleField('fullName', formData.personalDetails.fullName);
+    if (nameErr) errors['fullName'] = nameErr;
+
+    const dobErr = validateSingleField('dateOfBirth', formData.personalDetails.dateOfBirth);
+    if (dobErr) errors['dateOfBirth'] = dobErr;
+
+    const ageErr = validateSingleField('age', formData.personalDetails.age);
+    if (ageErr) errors['age'] = ageErr;
+
+    const genderErr = validateSingleField('gender', formData.personalDetails.gender);
+    if (genderErr) errors['gender'] = genderErr;
+
+    const maritalErr = validateSingleField('maritalStatus', formData.personalDetails.maritalStatus);
+    if (maritalErr) errors['maritalStatus'] = maritalErr;
+
+    const fatherErr = validateSingleField('fathersName', formData.personalDetails.fathersName);
+    if (fatherErr) errors['fathersName'] = fatherErr;
+
+    const motherErr = validateSingleField('mothersName', formData.personalDetails.mothersName);
+    if (motherErr) errors['mothersName'] = motherErr;
+
+    const mobileErr = validateSingleField('mobileNumber', formData.personalDetails.mobileNumber);
+    if (mobileErr) errors['mobileNumber'] = mobileErr;
+
+    const altMobileErr = validateSingleField('alternativeMobileNumber', formData.personalDetails.alternativeMobileNumber);
+    if (altMobileErr) errors['alternativeMobileNumber'] = altMobileErr;
+
+    const emailErr = validateSingleField('email', formData.personalDetails.email);
+    if (emailErr) errors['email'] = emailErr;
+
+    const aadhaarErr = validateSingleField('aadhaarNumber', formData.personalDetails.aadhaarNumber);
+    if (aadhaarErr) errors['aadhaarNumber'] = aadhaarErr;
+
+    const panErr = validateSingleField('panNumber', formData.personalDetails.panNumber);
+    if (panErr) errors['panNumber'] = panErr;
+
+    const ifscErr = validateSingleField('ifscCode', formData.personalDetails.ifscCode);
+    if (ifscErr) errors['ifscCode'] = ifscErr;
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstKey = Object.keys(errors)[0];
-      showPopupError(
-        errors[firstKey],
-        firstKey === 'photograph' ? 'Photograph Required' : 'Please Check Details',
-        firstKey === 'photograph' ? 'photo' : 'validation'
-      );
       scrollToField(firstKey);
       return false;
     }
@@ -537,23 +795,15 @@ export default function CandidateApplyPage() {
   const validateStep2 = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (
-      formData.familyDetails.fathersMobile &&
-      !/^[0-9]{10}$/.test(formData.familyDetails.fathersMobile)
-    ) {
-      errors['fathersMobile'] = 'Enter valid 10-digit mobile number for Father.';
-    }
-    if (
-      formData.familyDetails.mothersMobile &&
-      !/^[0-9]{10}$/.test(formData.familyDetails.mothersMobile)
-    ) {
-      errors['mothersMobile'] = 'Enter valid 10-digit mobile number for Mother.';
-    }
+    const fatherMobileErr = validateSingleField('fathersMobile', formData.familyDetails.fathersMobile);
+    if (fatherMobileErr) errors['fathersMobile'] = fatherMobileErr;
+
+    const motherMobileErr = validateSingleField('mothersMobile', formData.familyDetails.mothersMobile);
+    if (motherMobileErr) errors['mothersMobile'] = motherMobileErr;
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstKey = Object.keys(errors)[0];
-      showPopupError(errors[firstKey], 'Please Check Family Details', 'validation');
       scrollToField(firstKey);
       return false;
     }
@@ -565,58 +815,30 @@ export default function CandidateApplyPage() {
   const validateStep3 = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate Permanent Address
-    if (!formData.addressDetails.permanentAddress.doorNoStreet.trim()) {
-      errors['doorNoStreet'] = 'Door Number / Street is required.';
-    }
-    if (!formData.addressDetails.permanentAddress.villageOrArea.trim()) {
-      errors['villageOrArea'] = 'Village / Area is required.';
-    }
-    if (!formData.addressDetails.permanentAddress.taluk.trim()) {
-      errors['taluk'] = 'Taluk is required.';
-    }
-    if (!formData.addressDetails.permanentAddress.district.trim()) {
-      errors['district'] = 'District is required.';
-    }
-    if (!formData.addressDetails.permanentAddress.state.trim()) {
-      errors['state'] = 'State is required.';
-    }
-    if (
-      !formData.addressDetails.permanentAddress.pincode ||
-      !/^\d{6}$/.test(formData.addressDetails.permanentAddress.pincode)
-    ) {
-      errors['pincode'] = 'Enter a valid 6-digit PIN Code.';
-    }
+    ['doorNoStreet', 'villageOrArea', 'taluk', 'district', 'state', 'pincode'].forEach((f) => {
+      const err = validateSingleField(f, (formData.addressDetails.permanentAddress as any)[f]);
+      if (err) errors[f] = err;
+    });
 
-    // Validate Temporary Address if not same
     if (!formData.addressDetails.sameAsPermanent) {
-      if (!formData.addressDetails.temporaryAddress.doorNoStreet.trim()) {
-        errors['tempDoorNoStreet'] = 'Door Number / Street is required for temporary address.';
-      }
-      if (!formData.addressDetails.temporaryAddress.villageOrArea.trim()) {
-        errors['tempVillageOrArea'] = 'Village / Area is required for temporary address.';
-      }
-      if (!formData.addressDetails.temporaryAddress.taluk.trim()) {
-        errors['tempTaluk'] = 'Taluk is required for temporary address.';
-      }
-      if (!formData.addressDetails.temporaryAddress.district.trim()) {
-        errors['tempDistrict'] = 'District is required for temporary address.';
-      }
-      if (!formData.addressDetails.temporaryAddress.state.trim()) {
-        errors['tempState'] = 'State is required for temporary address.';
-      }
-      if (
-        !formData.addressDetails.temporaryAddress.pincode ||
-        !/^\d{6}$/.test(formData.addressDetails.temporaryAddress.pincode)
-      ) {
-        errors['tempPincode'] = 'Enter a valid 6-digit PIN Code for temporary address.';
-      }
+      const tempFieldMap: Record<string, string> = {
+        tempDoorNoStreet: 'doorNoStreet',
+        tempVillageOrArea: 'villageOrArea',
+        tempTaluk: 'taluk',
+        tempDistrict: 'district',
+        tempState: 'state',
+        tempPincode: 'pincode',
+      };
+      Object.keys(tempFieldMap).forEach((f) => {
+        const prop = tempFieldMap[f];
+        const err = validateSingleField(f, (formData.addressDetails.temporaryAddress as any)[prop]);
+        if (err) errors[f] = err;
+      });
     }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstKey = Object.keys(errors)[0];
-      showPopupError(errors[firstKey], 'Please Check Address Details', 'validation');
       scrollToField(firstKey);
       return false;
     }
@@ -628,53 +850,32 @@ export default function CandidateApplyPage() {
   const validateStep4 = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate Education Details
-    if (!formData.educationDetails.highestQualification) {
-      errors['highestQualification'] = 'Highest Qualification is required.';
-    }
-    if (!formData.educationDetails.institutionName.trim()) {
-      errors['institutionName'] = 'Institution Name is required.';
-    }
-    if (
-      !formData.educationDetails.passingYear ||
-      !/^(19|20)\d{2}$/.test(formData.educationDetails.passingYear)
-    ) {
-      errors['passingYear'] = 'Enter a valid 4-digit Passing Year.';
-    }
+    const qualErr = validateSingleField('highestQualification', formData.educationDetails.highestQualification);
+    if (qualErr) errors['highestQualification'] = qualErr;
 
-    // Validate Rupeeapex Previous Employment Details
+    const instErr = validateSingleField('institutionName', formData.educationDetails.institutionName);
+    if (instErr) errors['institutionName'] = instErr;
+
+    const yearErr = validateSingleField('passingYear', formData.educationDetails.passingYear);
+    if (yearErr) errors['passingYear'] = yearErr;
+
     if (formData.employmentDetails.previouslyWorkedHere) {
-      if (!formData.employmentDetails.joinDesignation?.trim()) {
-        errors['joinDesignation'] = 'Joining Designation at Rupeeapex is required.';
-      }
-      if (!formData.employmentDetails.relievingDesignation?.trim()) {
-        errors['relievingDesignation'] = 'Relieving Designation at Rupeeapex is required.';
-      }
-      if (!formData.employmentDetails.reasonForRelieving?.trim()) {
-        errors['reasonForRelieving'] = 'Reason for Relieving from Rupeeapex is required.';
-      }
+      ['joinDesignation', 'relievingDesignation', 'reasonForRelieving'].forEach((f) => {
+        const err = validateSingleField(f, (formData.employmentDetails as any)[f]);
+        if (err) errors[f] = err;
+      });
     }
 
-    // Validate Other Work Experience Details
     if (formData.employmentDetails.hasPreviousExperience) {
-      if (!formData.employmentDetails.previousCompany?.trim()) {
-        errors['previousCompany'] = 'Previous Company (Experience 1) is required.';
-      }
-      if (!formData.employmentDetails.previousDesignation?.trim()) {
-        errors['previousDesignation'] = 'Previous Designation (Experience 1) is required.';
-      }
-      if (
-        !formData.employmentDetails.yearsOfExperience ||
-        formData.employmentDetails.yearsOfExperience <= 0
-      ) {
-        errors['yearsOfExperience'] = 'Years of Experience (Experience 1) is required.';
-      }
+      ['previousCompany', 'previousDesignation', 'yearsOfExperience'].forEach((f) => {
+        const err = validateSingleField(f, (formData.employmentDetails as any)[f]);
+        if (err) errors[f] = err;
+      });
     }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstKey = Object.keys(errors)[0];
-      showPopupError(errors[firstKey], 'Please Check Education & Experience', 'validation');
       scrollToField(firstKey);
       return false;
     }
@@ -686,43 +887,31 @@ export default function CandidateApplyPage() {
   const validateStep5 = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate Preferred Job Role
-    if (!formData.preferredJobRole) {
-      errors['preferredJobRole'] = 'Please select your Preferred Job Role.';
-    }
-    if (formData.preferredJobRole === 'OTHER' && !formData.preferredJobRoleOther.trim()) {
-      errors['preferredJobRoleOther'] = 'Please specify your preferred job role.';
+    const roleErr = validateSingleField('preferredJobRole', formData.preferredJobRole);
+    if (roleErr) errors['preferredJobRole'] = roleErr;
+
+    if (formData.preferredJobRole === 'OTHER') {
+      const otherErr = validateSingleField('preferredJobRoleOther', formData.preferredJobRoleOther);
+      if (otherErr) errors['preferredJobRoleOther'] = otherErr;
     }
 
-    // Validate Referral Source
-    if (!formData.referenceDetails.referralSource) {
-      errors['referralSource'] = 'Please specify how you came to know about this job.';
+    const refSourceErr = validateSingleField('referralSource', formData.referenceDetails.referralSource);
+    if (refSourceErr) errors['referralSource'] = refSourceErr;
+
+    if (formData.referenceDetails.referralSource === 'Reference') {
+      const refNameErr = validateSingleField('referrerName', formData.referenceDetails.referrerName);
+      if (refNameErr) errors['referrerName'] = refNameErr;
     }
 
-    // Validate Resume Upload (Mandatory, PDF/DOC/DOCX, Max 5 MB)
-    if (!resumeFile) {
-      errors['resume'] =
-        'Resume upload is mandatory. Please upload your resume in PDF, DOC, or DOCX format (Max 5 MB).';
-    }
+    const resumeErr = validateSingleField('resume', null, formData, photoFile, resumeFile);
+    if (resumeErr) errors['resume'] = resumeErr;
 
-    // Validate Declaration
-    if (!formData.declarationAccepted) {
-      errors['declarationAccepted'] =
-        'You must accept the candidate declaration before submitting.';
-    }
+    const declErr = validateSingleField('declarationAccepted', formData.declarationAccepted);
+    if (declErr) errors['declarationAccepted'] = declErr;
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstKey = Object.keys(errors)[0];
-      showPopupError(
-        errors[firstKey],
-        firstKey === 'resume'
-          ? 'Resume Required'
-          : firstKey === 'declarationAccepted'
-          ? 'Declaration Required'
-          : 'Please Check Details',
-        firstKey === 'resume' ? 'photo' : 'validation'
-      );
       scrollToField(firstKey);
       return false;
     }
@@ -737,6 +926,7 @@ export default function CandidateApplyPage() {
   // Next Section Button Handler
   const handleNextStep = () => {
     closePopupError();
+    setValidatedSteps((prev) => ({ ...prev, [currentStep]: true }));
     let isValid = false;
 
     if (currentStep === 1) {
@@ -778,6 +968,8 @@ export default function CandidateApplyPage() {
       handleNextStep();
       return;
     }
+
+    setValidatedSteps({ 1: true, 2: true, 3: true, 4: true, 5: true });
 
     // Re-verify entire application across all 5 stages before sending to API
     if (!validateStep1()) {
@@ -1303,6 +1495,7 @@ export default function CandidateApplyPage() {
                           setPhotoFile(null);
                           setPhotoPreview(null);
                           if (fileInputRef.current) fileInputRef.current.value = '';
+                          handleLiveValidation('photograph', null, formData, null);
                         }}
                         className="px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl font-medium"
                       >
@@ -1347,11 +1540,12 @@ export default function CandidateApplyPage() {
                     placeholder="Full name as per Aadhaar"
                     value={formData.personalDetails.fullName}
                     onChange={(e) => {
-                      clearFieldError('fullName');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        personalDetails: { ...prev.personalDetails, fullName: e.target.value },
+                        personalDetails: { ...prev.personalDetails, fullName: val },
                       }));
+                      handleLiveValidation('fullName', val);
                     }}
                     className={getFieldClass(
                       'fullName',
@@ -1403,14 +1597,15 @@ export default function CandidateApplyPage() {
                     required
                     value={formData.personalDetails.age}
                     onChange={(e) => {
-                      clearFieldError('age');
+                      const val = Number(e.target.value);
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          age: Number(e.target.value),
+                          age: val,
                         },
                       }));
+                      handleLiveValidation('age', val);
                     }}
                     className={getFieldClass(
                       'age',
@@ -1434,14 +1629,15 @@ export default function CandidateApplyPage() {
                     name="gender"
                     value={formData.personalDetails.gender}
                     onChange={(e) => {
-                      clearFieldError('gender');
+                      const val = e.target.value as any;
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          gender: e.target.value as any,
+                          gender: val,
                         },
                       }));
+                      handleLiveValidation('gender', val);
                     }}
                     className={getFieldClass(
                       'gender',
@@ -1451,6 +1647,11 @@ export default function CandidateApplyPage() {
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                   </select>
+                  {fieldErrors['gender'] && (
+                    <p className="mt-1 text-xs text-red-600 font-medium">
+                      {fieldErrors['gender']}
+                    </p>
+                  )}
                 </div>
 
                 {/* Marital Status */}
@@ -1463,14 +1664,15 @@ export default function CandidateApplyPage() {
                     name="maritalStatus"
                     value={formData.personalDetails.maritalStatus}
                     onChange={(e) => {
-                      clearFieldError('maritalStatus');
+                      const val = e.target.value as any;
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          maritalStatus: e.target.value as any,
+                          maritalStatus: val,
                         },
                       }));
+                      handleLiveValidation('maritalStatus', val);
                     }}
                     className={getFieldClass(
                       'maritalStatus',
@@ -1483,6 +1685,11 @@ export default function CandidateApplyPage() {
                       </option>
                     ))}
                   </select>
+                  {fieldErrors['maritalStatus'] && (
+                    <p className="mt-1 text-xs text-red-600 font-medium">
+                      {fieldErrors['maritalStatus']}
+                    </p>
+                  )}
                 </div>
 
                 {/* Blood Group (Optional) */}
@@ -1528,11 +1735,12 @@ export default function CandidateApplyPage() {
                     placeholder="Father's full name"
                     value={formData.personalDetails.fathersName}
                     onChange={(e) => {
-                      clearFieldError('fathersName');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        personalDetails: { ...prev.personalDetails, fathersName: e.target.value },
+                        personalDetails: { ...prev.personalDetails, fathersName: val },
                       }));
+                      handleLiveValidation('fathersName', val);
                     }}
                     className={getFieldClass(
                       'fathersName',
@@ -1559,11 +1767,12 @@ export default function CandidateApplyPage() {
                     placeholder="Mother's full name"
                     value={formData.personalDetails.mothersName}
                     onChange={(e) => {
-                      clearFieldError('mothersName');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        personalDetails: { ...prev.personalDetails, mothersName: e.target.value },
+                        personalDetails: { ...prev.personalDetails, mothersName: val },
                       }));
+                      handleLiveValidation('mothersName', val);
                     }}
                     className={getFieldClass(
                       'mothersName',
@@ -1618,14 +1827,15 @@ export default function CandidateApplyPage() {
                       placeholder="10-digit mobile"
                       value={formData.personalDetails.mobileNumber}
                       onChange={(e) => {
-                        clearFieldError('mobileNumber');
+                        const val = e.target.value.replace(/\D/g, '');
                         setFormData((prev) => ({
                           ...prev,
                           personalDetails: {
                             ...prev.personalDetails,
-                            mobileNumber: e.target.value.replace(/\D/g, ''),
+                            mobileNumber: val,
                           },
                         }));
+                        handleLiveValidation('mobileNumber', val);
                       }}
                       className={getFieldClass(
                         'mobileNumber',
@@ -1658,14 +1868,15 @@ export default function CandidateApplyPage() {
                       placeholder="Optional backup mobile"
                       value={formData.personalDetails.alternativeMobileNumber}
                       onChange={(e) => {
-                        clearFieldError('alternativeMobileNumber');
+                        const val = e.target.value.replace(/\D/g, '');
                         setFormData((prev) => ({
                           ...prev,
                           personalDetails: {
                             ...prev.personalDetails,
-                            alternativeMobileNumber: e.target.value.replace(/\D/g, ''),
+                            alternativeMobileNumber: val,
                           },
                         }));
+                        handleLiveValidation('alternativeMobileNumber', val);
                       }}
                       className={getFieldClass(
                         'alternativeMobileNumber',
@@ -1693,11 +1904,12 @@ export default function CandidateApplyPage() {
                     placeholder="candidate@example.com"
                     value={formData.personalDetails.email}
                     onChange={(e) => {
-                      clearFieldError('email');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        personalDetails: { ...prev.personalDetails, email: e.target.value },
+                        personalDetails: { ...prev.personalDetails, email: val },
                       }));
+                      handleLiveValidation('email', val);
                     }}
                     className={getFieldClass(
                       'email',
@@ -1725,14 +1937,15 @@ export default function CandidateApplyPage() {
                     placeholder="12-digit Aadhaar number"
                     value={formData.personalDetails.aadhaarNumber}
                     onChange={(e) => {
-                      clearFieldError('aadhaarNumber');
+                      const val = e.target.value.replace(/\D/g, '');
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          aadhaarNumber: e.target.value.replace(/\D/g, ''),
+                          aadhaarNumber: val,
                         },
                       }));
+                      handleLiveValidation('aadhaarNumber', val);
                     }}
                     className={getFieldClass(
                       'aadhaarNumber',
@@ -1760,14 +1973,15 @@ export default function CandidateApplyPage() {
                     placeholder="e.g. ABCDE1234F"
                     value={formData.personalDetails.panNumber}
                     onChange={(e) => {
-                      clearFieldError('panNumber');
+                      const val = e.target.value.toUpperCase();
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          panNumber: e.target.value.toUpperCase(),
+                          panNumber: val,
                         },
                       }));
+                      handleLiveValidation('panNumber', val);
                     }}
                     className={getFieldClass(
                       'panNumber',
@@ -1845,14 +2059,15 @@ export default function CandidateApplyPage() {
                     placeholder="e.g. SBIN0001234"
                     value={formData.personalDetails.ifscCode}
                     onChange={(e) => {
-                      clearFieldError('ifscCode');
+                      const val = e.target.value.toUpperCase();
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
-                          ifscCode: e.target.value.toUpperCase(),
+                          ifscCode: val,
                         },
                       }));
+                      handleLiveValidation('ifscCode', val);
                     }}
                     className={getFieldClass(
                       'ifscCode',
@@ -1903,159 +2118,172 @@ export default function CandidateApplyPage() {
                 <Users className="w-5 h-5 text-[#006B3C]" />
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">FAMILY DETAILS</h2>
               </div>
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* Father's Occupation */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Father&apos;s Occupation
-                  </label>
-                  <input
-                    id="fathersOccupation"
-                    name="fathersOccupation"
-                    type="text"
-                    placeholder="e.g. Farmer / Business / Service"
-                    value={formData.familyDetails.fathersOccupation}
-                    onChange={(e) => {
-                      clearFieldError('fathersOccupation');
-                      setFormData((prev) => ({
-                        ...prev,
-                        familyDetails: { ...prev.familyDetails, fathersOccupation: e.target.value },
-                      }));
-                    }}
-                    className={getFieldClass(
-                      'fathersOccupation',
-                      'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+              <div className="p-6 space-y-5">
+                {/* First Row: Father's Occupation and Father's Mobile Number */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Father's Occupation */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Father&apos;s Occupation
+                    </label>
+                    <input
+                      id="fathersOccupation"
+                      name="fathersOccupation"
+                      type="text"
+                      placeholder="e.g. Farmer / Business / Service"
+                      value={formData.familyDetails.fathersOccupation}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          familyDetails: { ...prev.familyDetails, fathersOccupation: val },
+                        }));
+                        handleLiveValidation('fathersOccupation', val);
+                      }}
+                      className={getFieldClass(
+                        'fathersOccupation',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['fathersOccupation'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['fathersOccupation']}
+                      </p>
                     )}
-                  />
-                  {fieldErrors['fathersOccupation'] && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">
-                      {fieldErrors['fathersOccupation']}
-                    </p>
-                  )}
+                  </div>
+
+                  {/* Father's Mobile Number */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Father&apos;s Mobile Number
+                    </label>
+                    <input
+                      id="fathersMobile"
+                      name="fathersMobile"
+                      type="tel"
+                      maxLength={10}
+                      placeholder="10-digit mobile"
+                      value={formData.familyDetails.fathersMobile}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setFormData((prev) => ({
+                          ...prev,
+                          familyDetails: {
+                            ...prev.familyDetails,
+                            fathersMobile: val,
+                          },
+                        }));
+                        handleLiveValidation('fathersMobile', val);
+                      }}
+                      className={getFieldClass(
+                        'fathersMobile',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['fathersMobile'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['fathersMobile']}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Father's Mobile */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Father&apos;s Mobile Number
-                  </label>
-                  <input
-                    id="fathersMobile"
-                    name="fathersMobile"
-                    type="tel"
-                    maxLength={10}
-                    placeholder="10-digit mobile"
-                    value={formData.familyDetails.fathersMobile}
-                    onChange={(e) => {
-                      clearFieldError('fathersMobile');
-                      setFormData((prev) => ({
-                        ...prev,
-                        familyDetails: {
-                          ...prev.familyDetails,
-                          fathersMobile: e.target.value.replace(/\D/g, ''),
-                        },
-                      }));
-                    }}
-                    className={getFieldClass(
-                      'fathersMobile',
-                      'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                {/* Second Row: Mother's Occupation and Mother's Mobile Number */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Mother's Occupation */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Mother&apos;s Occupation
+                    </label>
+                    <input
+                      id="mothersOccupation"
+                      name="mothersOccupation"
+                      type="text"
+                      placeholder="e.g. Homemaker / Teacher"
+                      value={formData.familyDetails.mothersOccupation}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          familyDetails: { ...prev.familyDetails, mothersOccupation: val },
+                        }));
+                        handleLiveValidation('mothersOccupation', val);
+                      }}
+                      className={getFieldClass(
+                        'mothersOccupation',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['mothersOccupation'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['mothersOccupation']}
+                      </p>
                     )}
-                  />
-                  {fieldErrors['fathersMobile'] && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">
-                      {fieldErrors['fathersMobile']}
-                    </p>
-                  )}
-                </div>
+                  </div>
 
-                {/* Mother's Occupation */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Mother&apos;s Occupation
-                  </label>
-                  <input
-                    id="mothersOccupation"
-                    name="mothersOccupation"
-                    type="text"
-                    placeholder="e.g. Homemaker / Teacher"
-                    value={formData.familyDetails.mothersOccupation}
-                    onChange={(e) => {
-                      clearFieldError('mothersOccupation');
-                      setFormData((prev) => ({
-                        ...prev,
-                        familyDetails: { ...prev.familyDetails, mothersOccupation: e.target.value },
-                      }));
-                    }}
-                    className={getFieldClass(
-                      'mothersOccupation',
-                      'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                  {/* Mother's Mobile Number */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Mother&apos;s Mobile Number
+                    </label>
+                    <input
+                      id="mothersMobile"
+                      name="mothersMobile"
+                      type="tel"
+                      maxLength={10}
+                      placeholder="10-digit mobile"
+                      value={formData.familyDetails.mothersMobile}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setFormData((prev) => ({
+                          ...prev,
+                          familyDetails: {
+                            ...prev.familyDetails,
+                            mothersMobile: val,
+                          },
+                        }));
+                        handleLiveValidation('mothersMobile', val);
+                      }}
+                      className={getFieldClass(
+                        'mothersMobile',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['mothersMobile'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['mothersMobile']}
+                      </p>
                     )}
-                  />
-                  {fieldErrors['mothersOccupation'] && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">
-                      {fieldErrors['mothersOccupation']}
-                    </p>
-                  )}
-                </div>
-
-                {/* Mother's Mobile */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Mother&apos;s Mobile Number
-                  </label>
-                  <input
-                    id="mothersMobile"
-                    name="mothersMobile"
-                    type="tel"
-                    maxLength={10}
-                    placeholder="10-digit mobile"
-                    value={formData.familyDetails.mothersMobile}
-                    onChange={(e) => {
-                      clearFieldError('mothersMobile');
-                      setFormData((prev) => ({
-                        ...prev,
-                        familyDetails: {
-                          ...prev.familyDetails,
-                          mothersMobile: e.target.value.replace(/\D/g, ''),
-                        },
-                      }));
-                    }}
-                    className={getFieldClass(
-                      'mothersMobile',
-                      'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
-                    )}
-                  />
-                  {fieldErrors['mothersMobile'] && (
-                    <p className="mt-1 text-xs text-red-600 font-medium">
-                      {fieldErrors['mothersMobile']}
-                    </p>
-                  )}
+                  </div>
                 </div>
 
                 {/* Spouse Occupation (if Married) */}
                 {formData.personalDetails.maritalStatus === 'Married' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Spouse Occupation
-                    </label>
-                    <input
-                      id="spouseOccupation"
-                      name="spouseOccupation"
-                      type="text"
-                      placeholder="e.g. Private employee / Business"
-                      value={formData.familyDetails.spouseOccupation}
-                      onChange={(e) => {
-                        clearFieldError('spouseOccupation');
-                        setFormData((prev) => ({
-                          ...prev,
-                          familyDetails: { ...prev.familyDetails, spouseOccupation: e.target.value },
-                        }));
-                      }}
-                      className={getFieldClass(
-                        'spouseOccupation',
-                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
-                      )}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Spouse Occupation
+                      </label>
+                      <input
+                        id="spouseOccupation"
+                        name="spouseOccupation"
+                        type="text"
+                        placeholder="e.g. Private employee / Business"
+                        value={formData.familyDetails.spouseOccupation}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData((prev) => ({
+                            ...prev,
+                            familyDetails: { ...prev.familyDetails, spouseOccupation: val },
+                          }));
+                          handleLiveValidation('spouseOccupation', val);
+                        }}
+                        className={getFieldClass(
+                          'spouseOccupation',
+                          'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                        )}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -2090,17 +2318,18 @@ export default function CandidateApplyPage() {
                         placeholder="e.g. 12/4B, Main Road"
                         value={formData.addressDetails.permanentAddress.doorNoStreet}
                         onChange={(e) => {
-                          clearFieldError('doorNoStreet');
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                doorNoStreet: e.target.value,
+                                doorNoStreet: val,
                               },
                             },
                           }));
+                          handleLiveValidation('doorNoStreet', val);
                         }}
                         className={getFieldClass(
                           'doorNoStreet',
@@ -2126,17 +2355,18 @@ export default function CandidateApplyPage() {
                         placeholder="Village / Town / Area"
                         value={formData.addressDetails.permanentAddress.villageOrArea}
                         onChange={(e) => {
-                          clearFieldError('villageOrArea');
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                villageOrArea: e.target.value,
+                                villageOrArea: val,
                               },
                             },
                           }));
+                          handleLiveValidation('villageOrArea', val);
                         }}
                         className={getFieldClass(
                           'villageOrArea',
@@ -2162,17 +2392,18 @@ export default function CandidateApplyPage() {
                         placeholder="Taluk"
                         value={formData.addressDetails.permanentAddress.taluk}
                         onChange={(e) => {
-                          clearFieldError('taluk');
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                taluk: e.target.value,
+                                taluk: val,
                               },
                             },
                           }));
+                          handleLiveValidation('taluk', val);
                         }}
                         className={getFieldClass(
                           'taluk',
@@ -2198,17 +2429,18 @@ export default function CandidateApplyPage() {
                         placeholder="District"
                         value={formData.addressDetails.permanentAddress.district}
                         onChange={(e) => {
-                          clearFieldError('district');
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                district: e.target.value,
+                                district: val,
                               },
                             },
                           }));
+                          handleLiveValidation('district', val);
                         }}
                         className={getFieldClass(
                           'district',
@@ -2234,17 +2466,18 @@ export default function CandidateApplyPage() {
                         placeholder="State"
                         value={formData.addressDetails.permanentAddress.state}
                         onChange={(e) => {
-                          clearFieldError('state');
+                          const val = e.target.value;
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                state: e.target.value,
+                                state: val,
                               },
                             },
                           }));
+                          handleLiveValidation('state', val);
                         }}
                         className={getFieldClass(
                           'state',
@@ -2271,17 +2504,18 @@ export default function CandidateApplyPage() {
                         placeholder="6-digit PIN"
                         value={formData.addressDetails.permanentAddress.pincode}
                         onChange={(e) => {
-                          clearFieldError('pincode');
+                          const val = e.target.value.replace(/\D/g, '');
                           setFormData((prev) => ({
                             ...prev,
                             addressDetails: {
                               ...prev.addressDetails,
                               permanentAddress: {
                                 ...prev.addressDetails.permanentAddress,
-                                pincode: e.target.value.replace(/\D/g, ''),
+                                pincode: val,
                               },
                             },
                           }));
+                          handleLiveValidation('pincode', val);
                         }}
                         className={getFieldClass(
                           'pincode',
@@ -2334,17 +2568,18 @@ export default function CandidateApplyPage() {
                           placeholder="e.g. 5A, North Street"
                           value={formData.addressDetails.temporaryAddress.doorNoStreet}
                           onChange={(e) => {
-                            clearFieldError('tempDoorNoStreet');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  doorNoStreet: e.target.value,
+                                  doorNoStreet: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempDoorNoStreet', val);
                           }}
                           className={getFieldClass(
                             'tempDoorNoStreet',
@@ -2370,17 +2605,18 @@ export default function CandidateApplyPage() {
                           placeholder="Village / Town / Area"
                           value={formData.addressDetails.temporaryAddress.villageOrArea}
                           onChange={(e) => {
-                            clearFieldError('tempVillageOrArea');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  villageOrArea: e.target.value,
+                                  villageOrArea: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempVillageOrArea', val);
                           }}
                           className={getFieldClass(
                             'tempVillageOrArea',
@@ -2406,17 +2642,18 @@ export default function CandidateApplyPage() {
                           placeholder="Taluk"
                           value={formData.addressDetails.temporaryAddress.taluk}
                           onChange={(e) => {
-                            clearFieldError('tempTaluk');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  taluk: e.target.value,
+                                  taluk: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempTaluk', val);
                           }}
                           className={getFieldClass(
                             'tempTaluk',
@@ -2442,17 +2679,18 @@ export default function CandidateApplyPage() {
                           placeholder="District"
                           value={formData.addressDetails.temporaryAddress.district}
                           onChange={(e) => {
-                            clearFieldError('tempDistrict');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  district: e.target.value,
+                                  district: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempDistrict', val);
                           }}
                           className={getFieldClass(
                             'tempDistrict',
@@ -2478,17 +2716,18 @@ export default function CandidateApplyPage() {
                           placeholder="State"
                           value={formData.addressDetails.temporaryAddress.state}
                           onChange={(e) => {
-                            clearFieldError('tempState');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  state: e.target.value,
+                                  state: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempState', val);
                           }}
                           className={getFieldClass(
                             'tempState',
@@ -2515,17 +2754,18 @@ export default function CandidateApplyPage() {
                           placeholder="6-digit PIN"
                           value={formData.addressDetails.temporaryAddress.pincode}
                           onChange={(e) => {
-                            clearFieldError('tempPincode');
+                            const val = e.target.value.replace(/\D/g, '');
                             setFormData((prev) => ({
                               ...prev,
                               addressDetails: {
                                 ...prev.addressDetails,
                                 temporaryAddress: {
                                   ...prev.addressDetails.temporaryAddress,
-                                  pincode: e.target.value.replace(/\D/g, ''),
+                                  pincode: val,
                                 },
                               },
                             }));
+                            handleLiveValidation('tempPincode', val);
                           }}
                           className={getFieldClass(
                             'tempPincode',
@@ -2567,14 +2807,15 @@ export default function CandidateApplyPage() {
                     required
                     value={formData.educationDetails.highestQualification}
                     onChange={(e) => {
-                      clearFieldError('highestQualification');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
                         educationDetails: {
                           ...prev.educationDetails,
-                          highestQualification: e.target.value,
+                          highestQualification: val,
                         },
                       }));
+                      handleLiveValidation('highestQualification', val);
                     }}
                     className={getFieldClass(
                       'highestQualification',
@@ -2632,14 +2873,15 @@ export default function CandidateApplyPage() {
                     placeholder="School / College name"
                     value={formData.educationDetails.institutionName}
                     onChange={(e) => {
-                      clearFieldError('institutionName');
+                      const val = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
                         educationDetails: {
                           ...prev.educationDetails,
-                          institutionName: e.target.value,
+                          institutionName: val,
                         },
                       }));
+                      handleLiveValidation('institutionName', val);
                     }}
                     className={getFieldClass(
                       'institutionName',
@@ -2667,14 +2909,15 @@ export default function CandidateApplyPage() {
                     placeholder="e.g. 2023"
                     value={formData.educationDetails.passingYear}
                     onChange={(e) => {
-                      clearFieldError('passingYear');
+                      const val = e.target.value.replace(/\D/g, '');
                       setFormData((prev) => ({
                         ...prev,
                         educationDetails: {
                           ...prev.educationDetails,
-                          passingYear: e.target.value.replace(/\D/g, ''),
+                          passingYear: val,
                         },
                       }));
+                      handleLiveValidation('passingYear', val);
                     }}
                     className={getFieldClass(
                       'passingYear',
@@ -2797,14 +3040,15 @@ export default function CandidateApplyPage() {
                           placeholder="e.g. Trainee / Field Executive"
                           value={formData.employmentDetails.joinDesignation}
                           onChange={(e) => {
-                            clearFieldError('joinDesignation');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               employmentDetails: {
                                 ...prev.employmentDetails,
-                                joinDesignation: e.target.value,
+                                joinDesignation: val,
                               },
                             }));
+                            handleLiveValidation('joinDesignation', val);
                           }}
                           className={getFieldClass(
                             'joinDesignation',
@@ -2831,14 +3075,15 @@ export default function CandidateApplyPage() {
                           placeholder="e.g. Senior Branch Executive"
                           value={formData.employmentDetails.relievingDesignation}
                           onChange={(e) => {
-                            clearFieldError('relievingDesignation');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               employmentDetails: {
                                 ...prev.employmentDetails,
-                                relievingDesignation: e.target.value,
+                                relievingDesignation: val,
                               },
                             }));
+                            handleLiveValidation('relievingDesignation', val);
                           }}
                           className={getFieldClass(
                             'relievingDesignation',
@@ -2889,14 +3134,15 @@ export default function CandidateApplyPage() {
                           placeholder="e.g. Relocated to hometown / Career progression"
                           value={formData.employmentDetails.reasonForRelieving}
                           onChange={(e) => {
-                            clearFieldError('reasonForRelieving');
+                            const val = e.target.value;
                             setFormData((prev) => ({
                               ...prev,
                               employmentDetails: {
                                 ...prev.employmentDetails,
-                                reasonForRelieving: e.target.value,
+                                reasonForRelieving: val,
                               },
                             }));
+                            handleLiveValidation('reasonForRelieving', val);
                           }}
                           className={getFieldClass(
                             'reasonForRelieving',
@@ -2982,14 +3228,15 @@ export default function CandidateApplyPage() {
                             placeholder="Company name"
                             value={formData.employmentDetails.previousCompany}
                             onChange={(e) => {
-                              clearFieldError('previousCompany');
+                              const val = e.target.value;
                               setFormData((prev) => ({
                                 ...prev,
                                 employmentDetails: {
                                   ...prev.employmentDetails,
-                                  previousCompany: e.target.value,
+                                  previousCompany: val,
                                 },
                               }));
+                              handleLiveValidation('previousCompany', val);
                             }}
                             className={getFieldClass(
                               'previousCompany',
@@ -3015,14 +3262,15 @@ export default function CandidateApplyPage() {
                             placeholder="e.g. Sales Executive / Clerk"
                             value={formData.employmentDetails.previousDesignation}
                             onChange={(e) => {
-                              clearFieldError('previousDesignation');
+                              const val = e.target.value;
                               setFormData((prev) => ({
                                 ...prev,
                                 employmentDetails: {
                                   ...prev.employmentDetails,
-                                  previousDesignation: e.target.value,
+                                  previousDesignation: val,
                                 },
                               }));
+                              handleLiveValidation('previousDesignation', val);
                             }}
                             className={getFieldClass(
                               'previousDesignation',
@@ -3050,14 +3298,15 @@ export default function CandidateApplyPage() {
                             placeholder="Years (e.g. 2)"
                             value={formData.employmentDetails.yearsOfExperience || ''}
                             onChange={(e) => {
-                              clearFieldError('yearsOfExperience');
+                              const val = Number(e.target.value);
                               setFormData((prev) => ({
                                 ...prev,
                                 employmentDetails: {
                                   ...prev.employmentDetails,
-                                  yearsOfExperience: Number(e.target.value),
+                                  yearsOfExperience: val,
                                 },
                               }));
+                              handleLiveValidation('yearsOfExperience', val);
                             }}
                             className={getFieldClass(
                               'yearsOfExperience',
@@ -3259,13 +3508,20 @@ export default function CandidateApplyPage() {
                     required
                     value={formData.preferredJobRole}
                     onChange={(e) => {
-                      clearFieldError('preferredJobRole');
-                      setFormData((prev) => ({
-                        ...prev,
-                        preferredJobRole: e.target.value as any,
-                        preferredJobRoleOther:
-                          e.target.value === 'OTHER' ? prev.preferredJobRoleOther : '',
-                      }));
+                      const val = e.target.value as any;
+                      setFormData((prev) => {
+                        const updated = {
+                          ...prev,
+                          preferredJobRole: val,
+                          preferredJobRoleOther:
+                            val === 'OTHER' ? prev.preferredJobRoleOther : '',
+                        };
+                        handleLiveValidation('preferredJobRole', val, updated);
+                        if (val !== 'OTHER') {
+                          clearFieldError('preferredJobRoleOther');
+                        }
+                        return updated;
+                      });
                     }}
                     className={getFieldClass(
                       'preferredJobRole',
@@ -3300,11 +3556,15 @@ export default function CandidateApplyPage() {
                       placeholder="e.g. Customer Relationship Executive / Branch Manager"
                       value={formData.preferredJobRoleOther}
                       onChange={(e) => {
-                        clearFieldError('preferredJobRoleOther');
-                        setFormData((prev) => ({
-                          ...prev,
-                          preferredJobRoleOther: e.target.value,
-                        }));
+                        const val = e.target.value;
+                        setFormData((prev) => {
+                          const updated = {
+                            ...prev,
+                            preferredJobRoleOther: val,
+                          };
+                          handleLiveValidation('preferredJobRoleOther', val, updated);
+                          return updated;
+                        });
                       }}
                       className={getFieldClass(
                         'preferredJobRoleOther',
@@ -3330,7 +3590,13 @@ export default function CandidateApplyPage() {
                 <FileCheck className="w-5 h-5 text-[#006B3C]" />
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">OTHER DETAILS</h2>
               </div>
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div
+                className={`p-6 grid grid-cols-1 ${
+                  formData.referenceDetails.referralSource === 'Reference'
+                    ? 'sm:grid-cols-3'
+                    : 'sm:grid-cols-2'
+                } gap-5`}
+              >
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     How did you come to know about this job? <span className="text-red-500">*</span>
@@ -3340,14 +3606,24 @@ export default function CandidateApplyPage() {
                     name="referralSource"
                     value={formData.referenceDetails.referralSource}
                     onChange={(e) => {
-                      clearFieldError('referralSource');
-                      setFormData((prev) => ({
-                        ...prev,
-                        referenceDetails: {
-                          ...prev.referenceDetails,
-                          referralSource: e.target.value as any,
-                        },
-                      }));
+                      const val = e.target.value as any;
+                      setFormData((prev) => {
+                        const updated = {
+                          ...prev,
+                          referenceDetails: {
+                            ...prev.referenceDetails,
+                            referralSource: val,
+                            referrerName: val === 'Reference' ? prev.referenceDetails.referrerName : '',
+                          },
+                        };
+                        handleLiveValidation('referralSource', val, updated);
+                        if (val !== 'Reference') {
+                          clearFieldError('referrerName');
+                        } else {
+                          handleLiveValidation('referrerName', updated.referenceDetails.referrerName, updated);
+                        }
+                        return updated;
+                      });
                     }}
                     className={getFieldClass(
                       'referralSource',
@@ -3367,29 +3643,44 @@ export default function CandidateApplyPage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Reference Name{' '}
-                    <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
-                  </label>
-                  <input
-                    id="referrerName"
-                    name="referrerName"
-                    type="text"
-                    placeholder="Optional reference contact name"
-                    value={formData.referenceDetails.referrerName}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        referenceDetails: {
-                          ...prev.referenceDetails,
-                          referrerName: e.target.value,
-                        },
-                      }))
-                    }
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none"
-                  />
-                </div>
+                {/* Conditional Reference Name field - only shown and mandatory when Reference is selected */}
+                {formData.referenceDetails.referralSource === 'Reference' && (
+                  <div className="animate-fadeIn">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      REFERENCE NAME <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="referrerName"
+                      name="referrerName"
+                      type="text"
+                      placeholder="Enter reference person's full name"
+                      value={formData.referenceDetails.referrerName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => {
+                          const updated = {
+                            ...prev,
+                            referenceDetails: {
+                              ...prev.referenceDetails,
+                              referrerName: val,
+                            },
+                          };
+                          handleLiveValidation('referrerName', val, updated);
+                          return updated;
+                        });
+                      }}
+                      className={getFieldClass(
+                        'referrerName',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['referrerName'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['referrerName']}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -3541,13 +3832,20 @@ export default function CandidateApplyPage() {
                     required
                     checked={formData.declarationAccepted}
                     onChange={(e) => {
-                      clearFieldError('declarationAccepted');
-                      setFormData((prev) => ({
-                        ...prev,
-                        declarationAccepted: e.target.checked,
-                      }));
+                      const checked = e.target.checked;
+                      setFormData((prev) => {
+                        const updated = {
+                          ...prev,
+                          declarationAccepted: checked,
+                        };
+                        handleLiveValidation('declarationAccepted', checked, updated);
+                        return updated;
+                      });
                     }}
-                    className="w-5 h-5 mt-0.5 text-[#006B3C] rounded border-slate-300 focus:ring-[#006B3C]"
+                    className={getFieldClass(
+                      'declarationAccepted',
+                      'w-5 h-5 mt-0.5 text-[#006B3C] rounded border-slate-300 focus:ring-[#006B3C]'
+                    )}
                   />
                   <label
                     htmlFor="declarationAccepted"
