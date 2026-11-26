@@ -82,11 +82,20 @@ export async function submitApplication(
   const previousApplicationId = previousApplications.length > 0 ? previousApplications[0].applicationId : undefined;
   const previousApplicationsCount = previousApplications.length;
 
+  // Clean conditional married data
+  const isMarried = data.personalDetails.maritalStatus === 'Married';
+  const marriageDate = isMarried ? (data.personalDetails.marriageDate || '').trim() : '';
+  const spouseName = isMarried ? (data.personalDetails.spouseName || '').trim() : '';
+  const spouseOccupation = isMarried ? (data.familyDetails?.spouseOccupation || '').trim() : '';
+  const spouseMobile = isMarried ? (data.familyDetails?.spouseMobile || '').trim() : '';
+
   // 5. Save Candidate record in MongoDB
   const candidate = await Candidate.create({
     applicationId,
     personalDetails: {
       ...data.personalDetails,
+      marriageDate,
+      spouseName,
       panNumber: data.personalDetails.panNumber ? data.personalDetails.panNumber.toUpperCase().trim() : '',
       drivingLicenseNumber: data.personalDetails.drivingLicenseNumber ? data.personalDetails.drivingLicenseNumber.toUpperCase().trim() : '',
       bloodGroup: data.personalDetails.bloodGroup || '',
@@ -94,7 +103,13 @@ export async function submitApplication(
       ifscCode: data.personalDetails.ifscCode ? data.personalDetails.ifscCode.toUpperCase().trim() : '',
       bankBranchName: data.personalDetails.bankBranchName ? data.personalDetails.bankBranchName.trim() : '',
     },
-    familyDetails: data.familyDetails,
+    familyDetails: {
+      ...data.familyDetails,
+      spouseOccupation,
+      spouseMobile,
+      spouseName,
+      marriageDate,
+    },
     contactDetails: {
       mobileNumber: data.personalDetails.mobileNumber,
       alternativeMobileNumber: data.personalDetails.alternativeMobileNumber,

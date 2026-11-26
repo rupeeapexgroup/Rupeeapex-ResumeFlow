@@ -8,7 +8,8 @@ export interface PersonalDetails {
   age: number;
   gender: 'Male' | 'Female';
   bloodGroup?: string;
-  maritalStatus: 'Single' | 'Married' | 'Divorced' | 'Widowed';
+  maritalStatus: 'Single' | 'Unmarried' | 'Married' | 'Divorced' | 'Widowed';
+  marriageDate?: string;
   fathersName: string;
   mothersName: string;
   spouseName?: string;
@@ -29,6 +30,7 @@ export interface FamilyDetails {
   mothersOccupation?: string;
   mothersMobile?: string;
   spouseOccupation?: string;
+  spouseMobile?: string;
   spouseName?: string;
   marriageDate?: string;
   numberOfChildren?: number;

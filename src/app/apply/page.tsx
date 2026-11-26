@@ -10,6 +10,7 @@ import {
   MARITAL_STATUSES,
   REFERRAL_SOURCES,
 } from '@/lib/constants';
+import { calculateExactAge } from '@/lib/validation';
 import {
   User,
   Users,
@@ -56,7 +57,8 @@ export default function CandidateApplyPage() {
       dateOfBirth: '',
       age: 21,
       gender: 'Male' as 'Male' | 'Female',
-      maritalStatus: 'Single' as 'Single' | 'Married' | 'Divorced' | 'Widowed',
+      maritalStatus: 'Single' as 'Single' | 'Unmarried' | 'Married' | 'Divorced' | 'Widowed',
+      marriageDate: '',
       fathersName: '',
       mothersName: '',
       spouseName: '',
@@ -77,6 +79,7 @@ export default function CandidateApplyPage() {
       mothersOccupation: '',
       mothersMobile: '',
       spouseOccupation: '',
+      spouseMobile: '',
     },
     addressDetails: {
       permanentAddress: {
@@ -233,13 +236,19 @@ export default function CandidateApplyPage() {
         if (value.toString().trim().length < 2) return 'Candidate Name must be at least 2 characters.';
         return null;
 
-      case 'dateOfBirth':
+      case 'dateOfBirth': {
         if (!value) return 'Date of Birth is mandatory.';
+        const exactAgeVal = calculateExactAge(value.toString());
+        if (exactAgeVal < 18) return 'Minimum age is 18 years.';
+        if (exactAgeVal > 35) return 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326';
         return null;
+      }
 
-      case 'age':
-        if (!value || Number(value) < 18 || Number(value) > 70) return 'Age must be between 18 and 70.';
+      case 'age': {
+        if (!value || Number(value) < 18) return 'Minimum age is 18 years.';
+        if (Number(value) > 35) return 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326';
         return null;
+      }
 
       case 'gender':
         if (!value) return 'Please select gender.';
@@ -247,6 +256,14 @@ export default function CandidateApplyPage() {
 
       case 'maritalStatus':
         if (!value) return 'Please select marital status.';
+        return null;
+
+      case 'marriageDate':
+        if (formState.personalDetails.maritalStatus === 'Married') {
+          if (!value || !value.toString().trim()) {
+            return 'Marriage Date is mandatory.';
+          }
+        }
         return null;
 
       case 'fathersName':
@@ -301,6 +318,14 @@ export default function CandidateApplyPage() {
       case 'mothersMobile':
         if (value && value.toString().trim() && !/^[0-9]{10}$/.test(value.toString().trim())) {
           return 'Enter valid 10-digit mobile number for Mother.';
+        }
+        return null;
+
+      case 'spouseMobile':
+        if (formState.personalDetails.maritalStatus === 'Married' && value && value.toString().trim()) {
+          if (!/^[0-9]{10}$/.test(value.toString().trim())) {
+            return 'Enter valid 10-digit mobile number for Spouse.';
+          }
         }
         return null;
 
@@ -474,20 +499,11 @@ export default function CandidateApplyPage() {
     }
   };
 
-  // Auto-calculate age when DOB changes
+  // Auto-calculate exact age when DOB changes and enforce age eligibility (<= 35)
   const handleDobChange = (dobStr: string) => {
-    let calculatedAge = formData.personalDetails.age;
+    let calculatedAge = 0;
     if (dobStr) {
-      const birthDate = new Date(dobStr);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      if (age >= 18 && age <= 70) {
-        calculatedAge = age;
-      }
+      calculatedAge = calculateExactAge(dobStr);
     }
     setFormData((prev) => {
       const updated = {
@@ -498,8 +514,22 @@ export default function CandidateApplyPage() {
           age: calculatedAge,
         },
       };
-      handleLiveValidation('dateOfBirth', dobStr, updated);
-      handleLiveValidation('age', calculatedAge, updated);
+
+      if (dobStr && calculatedAge > 35) {
+        showPopupError(
+          'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+          'Age Limit Exceeded',
+          'validation'
+        );
+        setFieldErrors((curr) => ({
+          ...curr,
+          dateOfBirth: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+          age: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+        }));
+      } else {
+        handleLiveValidation('dateOfBirth', dobStr, updated);
+        handleLiveValidation('age', calculatedAge, updated);
+      }
       return updated;
     });
   };
@@ -660,6 +690,7 @@ export default function CandidateApplyPage() {
         'age',
         'gender',
         'maritalStatus',
+        'marriageDate',
         'bloodGroup',
         'fathersName',
         'mothersName',
@@ -684,6 +715,7 @@ export default function CandidateApplyPage() {
         'mothersOccupation',
         'mothersMobile',
         'spouseOccupation',
+        'spouseMobile',
       ].includes(field)
     ) {
       return 2;
@@ -751,11 +783,29 @@ export default function CandidateApplyPage() {
     const ageErr = validateSingleField('age', formData.personalDetails.age);
     if (ageErr) errors['age'] = ageErr;
 
+    if (formData.personalDetails.dateOfBirth) {
+      const exactAge = calculateExactAge(formData.personalDetails.dateOfBirth);
+      if (exactAge > 35) {
+        showPopupError(
+          'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+          'Age Limit Exceeded',
+          'validation'
+        );
+        errors['dateOfBirth'] = 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326';
+        errors['age'] = 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326';
+      }
+    }
+
     const genderErr = validateSingleField('gender', formData.personalDetails.gender);
     if (genderErr) errors['gender'] = genderErr;
 
     const maritalErr = validateSingleField('maritalStatus', formData.personalDetails.maritalStatus);
     if (maritalErr) errors['maritalStatus'] = maritalErr;
+
+    if (formData.personalDetails.maritalStatus === 'Married') {
+      const mDateErr = validateSingleField('marriageDate', formData.personalDetails.marriageDate);
+      if (mDateErr) errors['marriageDate'] = mDateErr;
+    }
 
     const fatherErr = validateSingleField('fathersName', formData.personalDetails.fathersName);
     if (fatherErr) errors['fathersName'] = fatherErr;
@@ -800,6 +850,11 @@ export default function CandidateApplyPage() {
 
     const motherMobileErr = validateSingleField('mothersMobile', formData.familyDetails.mothersMobile);
     if (motherMobileErr) errors['mothersMobile'] = motherMobileErr;
+
+    if (formData.personalDetails.maritalStatus === 'Married') {
+      const spouseMobileErr = validateSingleField('spouseMobile', formData.familyDetails.spouseMobile);
+      if (spouseMobileErr) errors['spouseMobile'] = spouseMobileErr;
+    }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -992,6 +1047,24 @@ export default function CandidateApplyPage() {
       return;
     }
 
+    // Explicit check for age eligibility (Maximum 35 years)
+    const exactAge = calculateExactAge(formData.personalDetails.dateOfBirth);
+    if (exactAge > 35 || Number(formData.personalDetails.age) > 35) {
+      showPopupError(
+        'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+        'Age Limit Exceeded',
+        'validation'
+      );
+      setFieldErrors((prev) => ({
+        ...prev,
+        dateOfBirth: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+        age: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+      }));
+      setCurrentStep(1);
+      scrollToField('dateOfBirth');
+      return;
+    }
+
     // Check device internet connectivity
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       showPopupError(
@@ -1005,10 +1078,13 @@ export default function CandidateApplyPage() {
     setSubmitting(true);
 
     try {
+      const isMarried = formData.personalDetails.maritalStatus === 'Married';
       const payload = {
         ...formData,
         personalDetails: {
           ...formData.personalDetails,
+          marriageDate: isMarried ? (formData.personalDetails.marriageDate || '').trim() : '',
+          spouseName: isMarried ? (formData.personalDetails.spouseName || '').trim() : '',
           panNumber: formData.personalDetails.panNumber
             ? formData.personalDetails.panNumber.trim().toUpperCase()
             : '',
@@ -1025,6 +1101,13 @@ export default function CandidateApplyPage() {
           bankBranchName: formData.personalDetails.bankBranchName
             ? formData.personalDetails.bankBranchName.trim()
             : '',
+        },
+        familyDetails: {
+          ...formData.familyDetails,
+          spouseOccupation: isMarried ? (formData.familyDetails.spouseOccupation || '').trim() : '',
+          spouseMobile: isMarried ? (formData.familyDetails.spouseMobile || '').trim() : '',
+          marriageDate: isMarried ? (formData.personalDetails.marriageDate || '').trim() : '',
+          spouseName: isMarried ? (formData.personalDetails.spouseName || '').trim() : '',
         },
         addressDetails: {
           ...formData.addressDetails,
@@ -1081,9 +1164,9 @@ export default function CandidateApplyPage() {
           const isResume = /resume|cv|document/i.test(data?.error || '');
           showPopupError(
             data?.error ||
-              (isResume
-                ? 'The uploaded resume exceeds the maximum server limit of 5 MB. Please select a smaller document.'
-                : 'The uploaded photograph exceeds the maximum server limit of 5 MB. Please select a smaller photo.'),
+            (isResume
+              ? 'The uploaded resume exceeds the maximum server limit of 5 MB. Please select a smaller document.'
+              : 'The uploaded photograph exceeds the maximum server limit of 5 MB. Please select a smaller photo.'),
             isResume ? 'Resume Size Exceeded' : 'Photo Size Exceeded',
             'photo'
           );
@@ -1165,8 +1248,8 @@ export default function CandidateApplyPage() {
           isPhotoError
             ? 'Photo Upload Error'
             : isResumeError
-            ? 'Resume Upload Error'
-            : 'Please Check Details',
+              ? 'Resume Upload Error'
+              : 'Please Check Details',
           isPhotoError || isResumeError ? 'photo' : 'validation'
         );
         setSubmitting(false);
@@ -1180,7 +1263,7 @@ export default function CandidateApplyPage() {
       console.error('Unhandled submission error:', unhandledErr);
       showPopupError(
         unhandledErr?.message ||
-          'An unexpected error occurred while submitting. Please try again.',
+        'An unexpected error occurred while submitting. Please try again.',
         'Submission Error',
         'general'
       );
@@ -1269,15 +1352,14 @@ export default function CandidateApplyPage() {
 
             {/* Error Type Icon */}
             <div
-              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm ${
-                errorPopup.type === 'network'
+              className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 shadow-sm ${errorPopup.type === 'network'
                   ? 'bg-amber-100 text-amber-700'
                   : errorPopup.type === 'photo'
-                  ? 'bg-orange-100 text-orange-700'
-                  : errorPopup.type === 'server' || errorPopup.type === 'database'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-red-100 text-red-600'
-              }`}
+                    ? 'bg-orange-100 text-orange-700'
+                    : errorPopup.type === 'server' || errorPopup.type === 'database'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-red-100 text-red-600'
+                }`}
             >
               {errorPopup.type === 'network' ? (
                 <WifiOff className="w-7 h-7" />
@@ -1374,21 +1456,19 @@ export default function CandidateApplyPage() {
                           window.scrollTo({ top: 120, behavior: 'smooth' });
                         }
                       }}
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-200 ${
-                        isCompleted
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-200 ${isCompleted
                           ? 'bg-[#006B3C] text-white border-2 border-[#006B3C] shadow-sm hover:bg-[#005530] cursor-pointer'
                           : isCurrent
-                          ? 'bg-[#006B3C] text-white border-2 border-[#006B3C] ring-4 ring-emerald-100 shadow-md scale-110'
-                          : 'bg-white text-slate-400 border-2 border-slate-300 cursor-not-allowed'
-                      }`}
+                            ? 'bg-[#006B3C] text-white border-2 border-[#006B3C] ring-4 ring-emerald-100 shadow-md scale-110'
+                            : 'bg-white text-slate-400 border-2 border-slate-300 cursor-not-allowed'
+                        }`}
                       title={isCompleted ? `Go back to ${step.name}` : step.name}
-                      aria-label={`Step ${step.id}: ${step.name} ${
-                        isCompleted
+                      aria-label={`Step ${step.id}: ${step.name} ${isCompleted
                           ? '(Completed)'
                           : isCurrent
-                          ? '(Active Stage)'
-                          : '(Pending)'
-                      }`}
+                            ? '(Active Stage)'
+                            : '(Pending)'
+                        }`}
                     >
                       {isCompleted ? (
                         <Check className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.5]" />
@@ -1399,13 +1479,12 @@ export default function CandidateApplyPage() {
 
                     {/* Stage Name */}
                     <span
-                      className={`mt-2 text-center text-[9px] sm:text-[11px] md:text-xs leading-tight font-medium max-w-[65px] sm:max-w-[110px] transition-colors duration-200 ${
-                        isCurrent
+                      className={`mt-2 text-center text-[9px] sm:text-[11px] md:text-xs leading-tight font-medium max-w-[65px] sm:max-w-[110px] transition-colors duration-200 ${isCurrent
                           ? 'text-[#006B3C] font-extrabold'
                           : isCompleted
-                          ? 'text-slate-800 font-semibold'
-                          : 'text-slate-400'
-                      }`}
+                            ? 'text-slate-800 font-semibold'
+                            : 'text-slate-400'
+                        }`}
                     >
                       {step.name}
                     </span>
@@ -1447,11 +1526,10 @@ export default function CandidateApplyPage() {
               <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
                 {/* Photo Preview */}
                 <div
-                  className={`w-32 h-40 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden shrink-0 relative transition-all ${
-                    fieldErrors['photograph']
+                  className={`w-32 h-40 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden shrink-0 relative transition-all ${fieldErrors['photograph']
                       ? 'border-red-500 ring-4 ring-red-200 bg-red-50/50'
                       : 'border-slate-300 bg-slate-50'
-                  }`}
+                    }`}
                 >
                   {photoPreview ? (
                     <Image
@@ -1665,14 +1743,26 @@ export default function CandidateApplyPage() {
                     value={formData.personalDetails.maritalStatus}
                     onChange={(e) => {
                       const val = e.target.value as any;
+                      const isNowMarried = val === 'Married';
                       setFormData((prev) => ({
                         ...prev,
                         personalDetails: {
                           ...prev.personalDetails,
                           maritalStatus: val,
+                          marriageDate: isNowMarried ? prev.personalDetails.marriageDate : '',
+                          spouseName: isNowMarried ? prev.personalDetails.spouseName : '',
+                        },
+                        familyDetails: {
+                          ...prev.familyDetails,
+                          spouseOccupation: isNowMarried ? prev.familyDetails.spouseOccupation : '',
+                          spouseMobile: isNowMarried ? prev.familyDetails.spouseMobile : '',
                         },
                       }));
                       handleLiveValidation('maritalStatus', val);
+                      if (!isNowMarried) {
+                        clearFieldError('marriageDate');
+                        clearFieldError('spouseMobile');
+                      }
                     }}
                     className={getFieldClass(
                       'maritalStatus',
@@ -1691,6 +1781,43 @@ export default function CandidateApplyPage() {
                     </p>
                   )}
                 </div>
+
+                {/* Marriage Date (Mandatory if Married) */}
+                {formData.personalDetails.maritalStatus === 'Married' && (
+                  <div className="animate-fadeIn">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Marriage Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="marriageDate"
+                      name="marriageDate"
+                      type="date"
+                      required
+                      max={new Date().toISOString().split('T')[0]}
+                      value={formData.personalDetails.marriageDate || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          personalDetails: {
+                            ...prev.personalDetails,
+                            marriageDate: val,
+                          },
+                        }));
+                        handleLiveValidation('marriageDate', val);
+                      }}
+                      className={getFieldClass(
+                        'marriageDate',
+                        'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                      )}
+                    />
+                    {fieldErrors['marriageDate'] && (
+                      <p className="mt-1 text-xs text-red-600 font-medium">
+                        {fieldErrors['marriageDate']}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Blood Group (Optional) */}
                 <div>
@@ -2257,12 +2384,12 @@ export default function CandidateApplyPage() {
                   </div>
                 </div>
 
-                {/* Spouse Occupation (if Married) */}
+                {/* Spouse Details (if Married) */}
                 {formData.personalDetails.maritalStatus === 'Married' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 animate-fadeIn">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Spouse Occupation
+                        Spouse Occupation <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
                       </label>
                       <input
                         id="spouseOccupation"
@@ -2283,6 +2410,40 @@ export default function CandidateApplyPage() {
                           'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
                         )}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Spouse Mobile Number <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+                      </label>
+                      <input
+                        id="spouseMobile"
+                        name="spouseMobile"
+                        type="tel"
+                        maxLength={10}
+                        placeholder="10-digit mobile"
+                        value={formData.familyDetails.spouseMobile || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setFormData((prev) => ({
+                            ...prev,
+                            familyDetails: {
+                              ...prev.familyDetails,
+                              spouseMobile: val,
+                            },
+                          }));
+                          handleLiveValidation('spouseMobile', val);
+                        }}
+                        className={getFieldClass(
+                          'spouseMobile',
+                          'w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#006B3C] focus:outline-none'
+                        )}
+                      />
+                      {fieldErrors['spouseMobile'] && (
+                        <p className="mt-1 text-xs text-red-600 font-medium">
+                          {fieldErrors['spouseMobile']}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -3591,11 +3752,10 @@ export default function CandidateApplyPage() {
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">OTHER DETAILS</h2>
               </div>
               <div
-                className={`p-6 grid grid-cols-1 ${
-                  formData.referenceDetails.referralSource === 'Reference'
+                className={`p-6 grid grid-cols-1 ${formData.referenceDetails.referralSource === 'Reference'
                     ? 'sm:grid-cols-3'
                     : 'sm:grid-cols-2'
-                } gap-5`}
+                  } gap-5`}
               >
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -3737,13 +3897,12 @@ export default function CandidateApplyPage() {
                 />
 
                 <div
-                  className={`rounded-xl border transition-all ${
-                    fieldErrors['resume']
+                  className={`rounded-xl border transition-all ${fieldErrors['resume']
                       ? 'border-red-500 ring-4 ring-red-100 bg-red-50/40'
                       : resumeFile
-                      ? 'border-emerald-300 bg-emerald-50/20'
-                      : 'border-slate-200 hover:border-[#006B3C]/50 bg-slate-50/50 hover:bg-slate-50'
-                  } p-3 sm:p-4`}
+                        ? 'border-emerald-300 bg-emerald-50/20'
+                        : 'border-slate-200 hover:border-[#006B3C]/50 bg-slate-50/50 hover:bg-slate-50'
+                    } p-3 sm:p-4`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">

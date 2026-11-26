@@ -238,8 +238,9 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
   const dobFormatted = formatDateOfBirth(candidate.personalDetails.dateOfBirth);
   const dobText = dobFormatted === 'NIL' ? 'NIL' : `${dobFormatted} (${candidate.personalDetails.age ? `${candidate.personalDetails.age} yrs` : 'NIL'})`;
 
+  const marriageDateFormatted = candidate.personalDetails.marriageDate ? formatDateOfBirth(candidate.personalDetails.marriageDate) : '';
   const maritalVal = candidate.personalDetails.maritalStatus
-    ? `${candidate.personalDetails.maritalStatus}${candidate.personalDetails.bloodGroup ? ` (${candidate.personalDetails.bloodGroup})` : ''}`
+    ? `${candidate.personalDetails.maritalStatus}${marriageDateFormatted && marriageDateFormatted !== 'NIL' ? ` (${marriageDateFormatted})` : ''}${candidate.personalDetails.bloodGroup ? ` [${candidate.personalDetails.bloodGroup}]` : ''}`
     : 'NIL';
 
   currentY = drawAlignedRow(
@@ -317,12 +318,16 @@ export async function generateCandidatePdf(candidate: CandidateRecord): Promise<
     currentY,
     { label1Width: 92, label2Width: 78 }
   );
-  if (candidate.familyDetails?.spouseOccupation || candidate.personalDetails.maritalStatus === 'Married') {
+  if (
+    candidate.familyDetails?.spouseOccupation ||
+    candidate.familyDetails?.spouseMobile ||
+    candidate.personalDetails.maritalStatus === 'Married'
+  ) {
     currentY = drawAlignedRow(
       'Spouse Occupation',
       candidate.familyDetails?.spouseOccupation || 'NIL',
-      'Spouse Name',
-      candidate.personalDetails?.spouseName || candidate.familyDetails?.spouseName || 'NIL',
+      'Spouse Mobile',
+      candidate.familyDetails?.spouseMobile || 'NIL',
       currentY,
       { label1Width: 92, label2Width: 78 }
     );

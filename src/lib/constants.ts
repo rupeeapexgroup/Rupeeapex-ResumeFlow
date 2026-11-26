@@ -38,7 +38,7 @@ export const BLOOD_Group = [
 ] as const;
 
 export const MARITAL_STATUSES = [
-  'Single', 'Married', 'Divorced', 'Widowed'
+  'Single', 'Unmarried', 'Married', 'Divorced', 'Widowed'
 ] as const;
 
 export const REFERRAL_SOURCES = [

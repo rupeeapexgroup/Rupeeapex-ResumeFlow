@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { candidateApplicationSchema } from '@/lib/validation';
+import { candidateApplicationSchema, calculateExactAge } from '@/lib/validation';
 import { submitApplication } from '@/services/candidateService';
 import { validateImageMagicBytes, validateResumeMagicBytes } from '@/lib/storage';
 
@@ -58,6 +58,18 @@ export async function POST(req: NextRequest) {
       parsedBody = JSON.parse(dataJson);
     } catch {
       return NextResponse.json({ error: 'Invalid JSON application payload' }, { status: 400 });
+    }
+
+    // Explicit server-side age eligibility check (Maximum 35 years)
+    const dob = parsedBody.personalDetails?.dateOfBirth;
+    const exactAge = calculateExactAge(dob);
+    const statedAge = Number(parsedBody.personalDetails?.age || 0);
+
+    if (exactAge > 35 || statedAge > 35) {
+      return NextResponse.json(
+        { error: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326' },
+        { status: 400 }
+      );
     }
 
     const validationResult = candidateApplicationSchema.safeParse(parsedBody);

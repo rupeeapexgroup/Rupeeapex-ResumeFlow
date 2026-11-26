@@ -361,6 +361,14 @@ export default function CandidateDetailPage() {
                   <dt className="text-slate-400">Marital Status</dt>
                   <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.maritalStatus)}</dd>
                 </div>
+                {candidate.personalDetails?.marriageDate && (
+                  <div>
+                    <dt className="text-slate-400">Marriage Date</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {formatDateOfBirth(candidate.personalDetails.marriageDate)}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-slate-400">Father&apos;s Name</dt>
                   <dd className="font-semibold text-slate-900">{formatNil(candidate.personalDetails?.fathersName)}</dd>
@@ -453,6 +461,12 @@ export default function CandidateDetailPage() {
                   <dt className="text-slate-400">Spouse Occupation</dt>
                   <dd className="font-semibold text-slate-900">
                     {formatNil(candidate.familyDetails?.spouseOccupation)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-400">Spouse Mobile</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {formatNil(candidate.familyDetails?.spouseMobile)}
                   </dd>
                 </div>
               </dl>

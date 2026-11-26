@@ -1,6 +1,20 @@
 import { z } from 'zod';
 import { PREFERRED_JOB_ROLES } from './constants';
 
+export function calculateExactAge(dobString?: string): number {
+  if (!dobString) return 0;
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return 0;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 export const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').trim(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -41,10 +55,11 @@ export const candidateApplicationSchema = z
     personalDetails: z.object({
       fullName: z.string().min(2, 'Candidate Name is required (min 2 characters)').trim(),
       dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid Date of Birth is required'),
-      age: z.coerce.number().min(18, 'Minimum age is 18 years').max(70, 'Age must be 70 or below'),
+      age: z.coerce.number().min(18, 'Minimum age is 18 years').max(35, 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326'),
       gender: z.enum(['Male', 'Female'], { required_error: 'Please select gender' }),
       bloodGroup: z.string().optional().or(z.literal('')),
-      maritalStatus: z.enum(['Single', 'Married', 'Divorced', 'Widowed'], { required_error: 'Please select marital status' }),
+      maritalStatus: z.enum(['Single', 'Unmarried', 'Married', 'Divorced', 'Widowed'], { required_error: 'Please select marital status' }),
+      marriageDate: z.string().optional().or(z.literal('')),
       fathersName: z.string().min(2, "Father's Name is required").trim(),
       mothersName: z.string().min(2, "Mother's Name is required").trim(),
       spouseName: z.string().optional().or(z.literal('')),
@@ -64,6 +79,7 @@ export const candidateApplicationSchema = z
       mothersOccupation: z.string().optional().or(z.literal('')),
       mothersMobile: z.string().regex(/^[0-9]{10}$/, 'Enter valid 10-digit mobile number').optional().or(z.literal('')),
       spouseOccupation: z.string().optional().or(z.literal('')),
+      spouseMobile: z.string().regex(/^[0-9]{10}$/, 'Enter valid 10-digit mobile number for Spouse').optional().or(z.literal('')),
       spouseName: z.string().optional().or(z.literal('')),
       marriageDate: z.string().optional().or(z.literal('')),
       numberOfChildren: z.coerce.number().min(0).optional().default(0),
@@ -125,6 +141,51 @@ export const candidateApplicationSchema = z
     }),
   })
   .superRefine((data, ctx) => {
+    // Exact Age Validation (Must be <= 35 years calculated with year, month, and day)
+    if (data.personalDetails?.dateOfBirth) {
+      const exactAge = calculateExactAge(data.personalDetails.dateOfBirth);
+      if (exactAge < 18) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Minimum age is 18 years',
+          path: ['personalDetails', 'dateOfBirth'],
+        });
+      } else if (exactAge > 35) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+          path: ['personalDetails', 'dateOfBirth'],
+        });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'The maximum age limit for this application is 35 years.  Contact: hr@rupeeapexGroup.com || +91 8925866326',
+          path: ['personalDetails', 'age'],
+        });
+      }
+    }
+
+    // Marriage Date Validation (Mandatory only if Married)
+    if (data.personalDetails?.maritalStatus === 'Married') {
+      if (!data.personalDetails.marriageDate || !data.personalDetails.marriageDate.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Marriage Date is mandatory.',
+          path: ['personalDetails', 'marriageDate'],
+        });
+      }
+    }
+
+    // Spouse Mobile Validation (Optional, but if entered must be 10 digits)
+    if (data.familyDetails?.spouseMobile && data.familyDetails.spouseMobile.trim()) {
+      if (!/^[0-9]{10}$/.test(data.familyDetails.spouseMobile.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Enter valid 10-digit mobile number for Spouse.',
+          path: ['familyDetails', 'spouseMobile'],
+        });
+      }
+    }
+
     if (data.personalDetails?.ifscCode && data.personalDetails.ifscCode.trim()) {
       if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(data.personalDetails.ifscCode.trim())) {
         ctx.addIssue({
